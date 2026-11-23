@@ -37,7 +37,7 @@ Lee en este orden (unos 30 minutos) y no hace falta más para empezar:
 Con el proyecto ya instalado (ver [Instalación](#instalación-primera-vez)):
 
 ```bash
-cd "/d/Backup_CLOUD/OneDrive - Canella, S.A/GitHub/AUTOMATE_CANELLA"
+cd "/d/Backup_CLOUD/OneDrive - Canella, S.A/GitHub/Orbit_Canella"
 source .venv/Scripts/activate
 flask --app wsgi run --debug
 ```
@@ -53,10 +53,13 @@ flask --app wsgi run --debug
 
 ## Instalación (primera vez)
 
-Requisitos: Python 3.11 o superior (probado con 3.13) y Git Bash.
+Requisitos: Python 3.11 o superior (probado con 3.13) y Git Bash. Repositorio privado:
+<https://github.com/FernandHanser/Orbit_Canella> (pedir acceso al responsable).
 
 ```bash
-cd "/d/Backup_CLOUD/OneDrive - Canella, S.A/GitHub/AUTOMATE_CANELLA"
+cd "/d/Backup_CLOUD/OneDrive - Canella, S.A/GitHub"
+git clone -b dev https://github.com/FernandHanser/Orbit_Canella.git
+cd Orbit_Canella
 
 # 1. Entorno virtual y dependencias
 python -m venv .venv

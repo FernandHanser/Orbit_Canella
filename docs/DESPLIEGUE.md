@@ -38,7 +38,7 @@ usan `C:\ORBIT`; cámbialas si el hub vive en otra carpeta.
 2. Clonar la rama `main` e instalar dependencias:
 
    ```powershell
-   git clone -b main <url-del-repo> C:\ORBIT
+   git clone -b main git@github.com:FernandHanser/Orbit_Canella.git C:\ORBIT
    cd C:\ORBIT
    python -m venv .venv
    .venv\Scripts\python -m pip install -r requirements.txt -r requirements-corte_caja.txt -r requirements-expedientes_seguros.txt
@@ -265,7 +265,7 @@ pruebas no debe tocarla nunca: su `.env` apunta solo a `AUTOMATE_CANELLA_PRUEBAS
    ```
 
 3. **Instalar** como en el paso 1 de esta guía, pero con la rama `dev` y la URL SSH del repositorio:
-   `git clone -b dev git@github.com:<org>/<repo>.git C:\ORBIT`.
+   `git clone -b dev git@github.com:FernandHanser/Orbit_Canella.git C:\ORBIT`.
 
 4. **`.env` de pruebas**: como el de producción, con estos cambios:
 
