@@ -22,9 +22,9 @@ Variables disponibles en todas las plantillas: `NOMBRE_PRODUCTO`, `SUBTITULO_PRO
 
 ## Menú lateral que se oculta
 
-En pantallas grandes, «Ocultar menú» (al pie del menú, sobre «Cerrar sesión») o **Ctrl + B**
-desliza el menú fuera de la vista y el contenido ocupa todo el ancho. Queda un botón fijo arriba a
-la izquierda para mostrarlo de nuevo. En celular no aplica: Tabler ya pliega el menú con su botón.
+En pantallas grandes, el ícono junto a la marca (`ti-layout-sidebar-left-collapse`, con su texto en
+el `title` y el `aria-label`) o **Ctrl + B** desliza el menú fuera de la vista y el contenido ocupa
+todo el ancho. Queda un ícono fijo arriba a la izquierda para mostrarlo de nuevo. En celular no aplica: Tabler ya pliega el menú con su botón.
 
 - La preferencia se guarda en el navegador (`localStorage`, clave `orbit.menu`), no en el servidor:
   es una comodidad de pantalla. Se sincroniza entre pestañas abiertas.

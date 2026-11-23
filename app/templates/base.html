@@ -20,6 +20,11 @@
 <div class="page">
   <aside class="navbar navbar-vertical navbar-expand-lg" id="menu-principal" data-bs-theme="dark">
     <div class="container-fluid">
+      {# Solo en pantallas grandes (CSS): en celular el menú ya se pliega con el botón de Tabler. #}
+      <button type="button" class="btn btn-icon menu-boton-ocultar" data-menu-ocultar
+              aria-controls="menu-principal" aria-expanded="true" title="Ocultar menú (Ctrl + B)" aria-label="Ocultar menú">
+        <i class="ti ti-layout-sidebar-left-collapse"></i>
+      </button>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu-lateral" aria-controls="menu-lateral" aria-expanded="false" aria-label="Mostrar menú">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -78,14 +83,6 @@
             </div>
           </div>
           <ul class="navbar-nav">
-            {# Solo en pantallas grandes: en celular el menú ya se pliega con el botón de arriba. #}
-            <li class="nav-item d-none d-lg-block">
-              <button type="button" class="nav-link border-0 bg-transparent w-100 text-start" data-menu-ocultar
-                      aria-controls="menu-principal" aria-expanded="true" title="Atajo: Ctrl + B">
-                <span class="nav-link-icon"><i class="ti ti-layout-sidebar-left-collapse"></i></span>
-                <span class="nav-link-title">Ocultar menú</span>
-              </button>
-            </li>
             <li class="nav-item">
               <form method="post" action="{{ url_for('auth.salir') }}" class="m-0">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

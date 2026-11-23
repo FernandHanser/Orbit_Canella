@@ -14,8 +14,15 @@
 /* Menú que se oculta (static/js/menu.js). Solo en pantallas grandes: en celular Tabler ya lo pliega.
    Se desliza fuera de la vista y el contenido ocupa el ancho; «visibility» lo saca del orden del
    tabulador para que el teclado no recorra enlaces invisibles. */
-.menu-boton-mostrar { display: none; }
+.menu-boton-mostrar, .menu-boton-ocultar { display: none; }
 @media (min-width: 992px) {
+  /* Ícono arriba a la derecha del menú, a la altura de la marca; la marca deja su espacio. */
+  .navbar-vertical .marca { padding-right: 2.25rem; }
+  .menu-boton-ocultar {
+    display: inline-flex; position: absolute; top: .9rem; right: .5rem; z-index: 1;
+    background: transparent; border-color: transparent; color: rgba(255, 255, 255, .6);
+  }
+  .menu-boton-ocultar:hover, .menu-boton-ocultar:focus-visible { background: rgba(255, 255, 255, .08); color: #fff; }
   .navbar-vertical.navbar-expand-lg { transition: transform .25s ease, visibility .25s; }
   .navbar-vertical.navbar-expand-lg ~ .page-wrapper { transition: margin-inline-start .25s ease; }
   .menu-oculto .navbar-vertical.navbar-expand-lg { transform: translateX(-100%); visibility: hidden; }
