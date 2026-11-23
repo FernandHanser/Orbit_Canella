@@ -404,3 +404,30 @@ def test_modulo_deshabilitado_no_ejecuta_tareas(app):
     db.session.get(Modulo, "ejemplo").activo = True
     db.session.commit()
     assert ejecutar_tarea("ejemplo", "demo", proceso="prog", parametros={"pasos": 1}).estado == "exito"
+
+
+# ---------------------------------------------------------------- auditoría Krug (23/11/2026)
+
+def test_filtro_de_usuario_acepta_parte_del_usuario_sin_distinguir_mayusculas(app, entrar_como, autorizado):
+    entrar_como(autorizado)                         # deja un evento auth.acceso con usuario "autorizado"
+    assert any(e.get("evento") == "auth.acceso" for e in _eventos(app, usuario="AUTORIZ"))
+    assert not _eventos(app, usuario="otra-persona")
+
+
+def test_pantalla_de_logs_pide_el_usuario_stod_no_el_correo(entrar_como, admin):
+    html = entrar_como(admin).get("/admin/logs").get_data(as_text=True)
+    assert 'placeholder="usuario STOD"' in html and 'placeholder="correo"' not in html
+
+
+def test_ejecuciones_y_logs_muestran_el_nombre_del_modulo_y_la_fecha_como_el_resto(app, entrar_como, admin, autorizado):
+    import re
+    c_user = app.test_client()
+    entrar(c_user, autorizado.usuario_stod)
+    c_user.post("/m/ejemplo/ejecutar", data={"pasos": "1"})
+    c = entrar_como(admin)
+    for ruta in ("/admin/ejecuciones", "/admin/logs?modulo=ejemplo"):
+        html = c.get(ruta).get_data(as_text=True)
+        assert 'title="ejemplo">Módulo de ejemplo<' in html, ruta
+    logs = c.get("/admin/logs").get_data(as_text=True)
+    assert re.search(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", logs) and not re.search(r"\d{4}-\d{2}-\d{2} \d{2}:", logs)
+    assert 'title="core">Hub<' in logs

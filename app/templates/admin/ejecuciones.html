@@ -39,7 +39,7 @@
         {% for e in ejecuciones %}
           <tr>
             <td class="celda-ts">{{ e.inicio|fecha("%d/%m/%Y %H:%M:%S") }}</td>
-            <td class="font-monospace small">{{ e.modulo_id }}</td>
+            <td><span title="{{ e.modulo_id }}">{{ nombres_modulos.get(e.modulo_id, e.modulo_id) }}</span></td>
             <td>{{ e.tarea or "—" }}</td>
             <td class="small">{{ e.iniciado_por }}</td>
             <td>{{ estado_ejecucion(e.estado) }}</td>

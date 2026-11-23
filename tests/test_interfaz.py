@@ -130,3 +130,12 @@ def test_menu_se_puede_ocultar_en_todas_las_pantallas_con_menu(app, entrar_como,
 
 def test_pantallas_publicas_sin_menu_no_cargan_menu_js(client):
     assert "js/menu.js" not in client.get("/acceso").data.decode()
+
+
+def test_administracion_no_remite_a_archivos_del_codigo(entrar_como, superadmin):
+    # La pantalla la usa Contabilidad: no puede abrir docs/GLOSARIO.md ni app/modulos/<id>/__init__.py.
+    c = entrar_como(superadmin)
+    usuarios = c.get("/admin/usuarios").get_data(as_text=True)
+    modulos = c.get("/admin/modulos").get_data(as_text=True)
+    assert "docs/GLOSARIO.md" not in usuarios and "__init__.py" not in modulos
+    assert "alert-info" not in usuarios          # sin el aviso largo antes de la tabla

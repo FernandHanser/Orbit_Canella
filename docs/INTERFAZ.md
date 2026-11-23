@@ -276,3 +276,22 @@ Los datos leídos de SAP Business One llevan el logo de SAP delante, con la macr
 tooltip dice qué se leyó. En un encabezado va **primero**, con `encabezado(..., origen=origen_sap(detalle, "grande"))`,
 a la izquierda del título y del alto del título más el subtítulo. Así se usa en el visor de
 Expedientes. Solo va donde el dato viene de SAP, no como adorno.
+
+
+## Pantallas de administración: reglas de la auditoría Krug (23/11/2026)
+
+- **Un módulo, un nombre.** Donde aparezca un módulo (menú, inicio, catálogo, Ejecuciones, Logs,
+  detalle de una ejecución) se muestra su **nombre**; el identificador técnico (`corte_caja`)
+  queda en el `title`, al pasar el mouse. El hub se llama «Hub». La traducción vive en un solo
+  lugar: `_nombres_modulos()` en `app/core/admin.py`.
+- **Una sola forma de fecha:** `DD/MM/AAAA HH:MM:SS` en todo el hub. En Logs se agregan los
+  milisegundos atenuados, porque ordenan eventos del mismo segundo.
+- **Los filtros piden lo que de verdad buscan.** El filtro «Usuario» de Logs busca el usuario STOD
+  (parte del texto, sin distinguir mayúsculas), y así lo dice su texto de ayuda.
+- **Sin referencias a archivos del código** (`docs/…`, `app/modulos/…`) en pantallas que usa
+  Contabilidad: no los pueden abrir. Lo que haga falta explicar va en una línea; el detalle, donde
+  se decide (p. ej. qué permite cada rol, en el formulario del usuario). Qué permite cada rol
+  también aparece al pasar el mouse por su etiqueta.
+
+Pruebas: `tests/test_logs_ejecuciones.py` (sección auditoría Krug) y
+`tests/test_interfaz.py::test_administracion_no_remite_a_archivos_del_codigo`.

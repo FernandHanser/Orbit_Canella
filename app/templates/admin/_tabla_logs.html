@@ -1,4 +1,4 @@
-{# Tabla de eventos de log. Espera la variable ``eventos`` (lista de dict). #}
+{# Tabla de eventos de log. Espera ``eventos`` (lista de dict) y ``nombres_modulos`` (id → nombre). #}
 {% from "_macros.html" import nivel_log %}
 <div class="table-responsive">
   <table class="table table-vcenter card-table table-sm tabla-logs">
@@ -8,9 +8,10 @@
     <tbody>
       {% for e in eventos %}
         <tr>
-          <td class="celda-ts small">{{ e.ts[:10] }} {{ e.ts[11:23] }}</td>
+          {#- Mismo formato que el resto del hub (DD/MM/AAAA); los milisegundos, atenuados: ordenan eventos del mismo segundo. #}
+          <td class="celda-ts small">{{ e.ts[8:10] }}/{{ e.ts[5:7] }}/{{ e.ts[:4] }} {{ e.ts[11:19] }}<span class="text-secondary">{{ e.ts[19:23] }}</span></td>
           <td>{{ nivel_log(e.nivel) }}</td>
-          <td><a class="font-monospace small" href="{{ url_for('admin.logs', modulo=e.modulo, dias=7) }}">{{ e.modulo }}</a></td>
+          <td class="small"><a href="{{ url_for('admin.logs', modulo=e.modulo, dias=7) }}"><span title="{{ e.modulo }}">{{ nombres_modulos.get(e.modulo, e.modulo) }}</span></a></td>
           <td class="font-monospace small">{{ e.evento or "—" }}</td>
           <td class="log-mensaje small">
             {#- El texto conserva sus saltos de línea propios; el espacio de la plantilla no entra. -#}

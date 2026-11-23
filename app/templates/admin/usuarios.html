@@ -7,25 +7,13 @@
   {% endcall %}
 {% endblock %}
 {% block contenido %}
-<div class="alert alert-info">
-  <div>
-    Cualquier persona activa en STOD puede iniciar sesión; queda registrada aquí en su primer ingreso, como
-    <strong>{{ ROLES[0].nombre }}</strong> y sin módulos. Usa <strong>Registrar usuario STOD</strong> para asignarle rol y módulos
-    antes de que entre por primera vez.
-  </div>
-</div>
-<div class="row row-cards mb-3">
-  {% for rol in ROLES %}
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <span class="badge bg-{{ rol.color }}-lt mb-2">{{ rol.nombre }}</span>
-          <div class="text-secondary small">{{ rol.descripcion }}</div>
-        </div>
-      </div>
-    </div>
-  {% endfor %}
-  <div class="col-12 text-secondary small">Ningún rol da acceso a los módulos por sí solo: cada módulo se asigna por persona. Glosario completo en <code>docs/GLOSARIO.md</code>.</div>
+{# Una línea: lo que hace falta para usar la tabla. Qué permite cada rol, al pasar el mouse por su
+   etiqueta (aquí y en cada fila); completo, en el formulario, donde se elige. #}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 text-secondary">
+  <span>Quien entra por primera vez queda como {{ ROLES[0].nombre }}, sin módulos.</span>
+  <span class="d-inline-flex gap-1">
+    {% for rol in ROLES %}<span class="badge bg-{{ rol.color }}-lt cursor-help" title="{{ rol.descripcion }}">{{ rol.nombre }}</span>{% endfor %}
+  </span>
 </div>
 <div class="card">
   <div class="table-responsive">
@@ -56,7 +44,7 @@
               </div>
             </td>
             <td>
-              <span class="badge bg-{{ u.info_rol.color }}-lt">{{ u.info_rol.nombre }}</span>
+              <span class="badge bg-{{ u.info_rol.color }}-lt cursor-help" title="{{ u.info_rol.descripcion }}">{{ u.info_rol.nombre }}</span>
             </td>
             <td>
               {% if not u.activo %}<span class="badge bg-secondary-lt">Deshabilitado</span>

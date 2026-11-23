@@ -48,6 +48,15 @@ def _registrar_cambios_permisos(usuario: Usuario, asignados: list[str], retirado
         log.info("Acceso a módulo retirado", extra={"evento": "admin.permiso_retirado", "datos": {"usuario_objetivo": usuario.usuario_stod, "modulo": modulo_id}})
 
 
+def _nombres_modulos() -> dict[str, str]:
+    """Identificador → nombre visible, para que Ejecuciones y Logs digan «Corte de caja diario» como
+    el menú y no ``corte_caja``. Incluye los módulos que ya no tienen código (quedan en el catálogo)."""
+    nombres = {"core": "Hub"}
+    nombres.update({m.id: m.nombre for m in Modulo.query.all()})
+    nombres.update({d.id: d.nombre for d in registro().todos()})
+    return nombres
+
+
 # Reglas de la jerarquía (el superadministrador solo se asigna por consola):
 def puede_editar(objetivo: Usuario) -> bool:
     """Los administradores no editan al superadministrador."""
@@ -214,7 +223,7 @@ def ejecuciones():
     pagina = consulta.order_by(Ejecucion.inicio.desc()).paginate(page=pagina_actual(), per_page=POR_PAGINA, error_out=False)
     return render_template(
         "admin/ejecuciones.html", ejecuciones=pagina.items, paginacion=pagina, modulos=Modulo.query.order_by(Modulo.nombre).all(),
-        estados=Ejecucion.ESTADOS, filtro={"modulo": modulo, "estado": estado},
+        estados=Ejecucion.ESTADOS, filtro={"modulo": modulo, "estado": estado}, nombres_modulos=_nombres_modulos(),
     )
 
 
@@ -222,7 +231,8 @@ def ejecuciones():
 def ejecucion_detalle(ejecucion_id: str):
     ejecucion = db.session.get(Ejecucion, ejecucion_id) or abort(404)
     eventos = buscar_logs(current_app.config["LOG_DIR"], ejecucion_id=ejecucion.id, dias=31, limite=1000)
-    return render_template("admin/ejecucion_detalle.html", ejecucion=ejecucion, eventos=list(reversed(eventos)))
+    return render_template("admin/ejecucion_detalle.html", ejecucion=ejecucion, eventos=list(reversed(eventos)),
+                           nombres_modulos=_nombres_modulos())
 
 
 @bp.route("/logs")
@@ -238,5 +248,8 @@ def logs():
     filtro["dias"] = min(max(filtro["dias"], 1), current_app.config["LOG_RETENCION_DIAS"])
     eventos = buscar_logs(current_app.config["LOG_DIR"], limite=MAX_EVENTOS_LOGS, **filtro)
     pagina = PaginaLista(eventos, pagina_actual(), POR_PAGINA)
-    modulos_ids = ["core"] + sorted({m.id for m in Modulo.query.all()} | {d.id for d in registro().todos()})
-    return render_template("admin/logs.html", eventos=pagina.items, paginacion=pagina, tope=MAX_EVENTOS_LOGS, filtro=filtro, niveles=NIVELES, modulos_ids=modulos_ids)
+    nombres = _nombres_modulos()
+    # El hub primero; después los módulos por nombre, como en el menú.
+    modulos_ids = ["core"] + sorted((i for i in nombres if i != "core"), key=lambda i: nombres[i].lower())
+    return render_template("admin/logs.html", eventos=pagina.items, paginacion=pagina, tope=MAX_EVENTOS_LOGS, filtro=filtro,
+                           niveles=NIVELES, modulos_ids=modulos_ids, nombres_modulos=nombres)

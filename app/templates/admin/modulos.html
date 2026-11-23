@@ -76,9 +76,8 @@
     </table>
   </div>
   <div class="card-footer text-secondary small">
-    El nombre, la descripción, el ícono y las rutas vienen del código de cada módulo (<span class="font-monospace">app/modulos/&lt;id&gt;/__init__.py</span>).
-    Aquí se decide si el módulo está disponible; el acceso de cada persona se asigna en <a href="{{ url_for('admin.usuarios') }}">Usuarios y permisos</a>.
-    Deshabilitar un módulo bloquea todas sus rutas y APIs para todos, sin borrar las asignaciones.
+    Deshabilitar un módulo lo bloquea para todos, sin borrar a quién está asignado. El acceso de cada
+    persona se da en <a href="{{ url_for('admin.usuarios') }}">Usuarios y permisos</a>.
   </div>
 </div>
 {% endblock %}

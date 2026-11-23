@@ -321,6 +321,8 @@ def buscar_logs(
     archivos = sorted(directorio.glob(f"{PREFIJO_ARCHIVO}-*.jsonl"), reverse=True)
     minimo = _nivel_num(nivel_minimo)
     texto = (texto or "").lower().strip()
+    # Parte del usuario STOD, sin distinguir mayúsculas: quien busca no siempre lo sabe exacto.
+    usuario = (usuario or "").lower().strip()
     resultados: list[dict[str, Any]] = []
     for archivo in archivos:
         try:
@@ -341,7 +343,7 @@ def buscar_logs(
                 continue
             if ejecucion_id and evento.get("ejecucion_id") != ejecucion_id:
                 continue
-            if usuario and evento.get("usuario") != usuario:
+            if usuario and usuario not in (evento.get("usuario") or "").lower():
                 continue
             if _nivel_num(evento.get("nivel")) < minimo:
                 continue

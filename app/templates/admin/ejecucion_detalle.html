@@ -11,7 +11,7 @@
   <div class="card-body">
     <div class="datagrid">
       <div><div class="datagrid-title">Identificador</div><div class="font-monospace small">{{ ejecucion.id }}</div></div>
-      <div><div class="datagrid-title">Módulo</div><div class="font-monospace">{{ ejecucion.modulo_id }}</div></div>
+      <div><div class="datagrid-title">Módulo</div><div title="{{ ejecucion.modulo_id }}">{{ nombres_modulos.get(ejecucion.modulo_id, ejecucion.modulo_id) }}</div></div>
       <div><div class="datagrid-title">Tarea</div><div>{{ ejecucion.tarea or "—" }}</div></div>
       <div><div class="datagrid-title">Iniciada por</div><div>{{ ejecucion.iniciado_por }}</div></div>
       <div><div class="datagrid-title">Estado</div><div>{{ estado_ejecucion(ejecucion.estado) }}</div></div>
