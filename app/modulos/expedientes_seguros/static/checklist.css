@@ -1,0 +1,5 @@
+/* Editor del checklist: estado visible de cada fila. */
+.fila-documento.inactivo input[name^="nombre-"] { color: var(--tblr-secondary); text-decoration: line-through; }
+.fila-documento.por-quitar { background: var(--tblr-danger-lt); }
+.fila-documento.por-quitar input[name^="nombre-"] { text-decoration: line-through; color: var(--tblr-danger); }
+.fila-documento .numero { display: inline-block; min-width: 1.75rem; text-align: right; }

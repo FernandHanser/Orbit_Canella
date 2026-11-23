@@ -1,0 +1,5 @@
+# Dependencias del módulo expedientes_seguros (además de requirements.txt).
+# pypdf arma el paquete; pypdfium2 + Pillow generan las miniaturas en el servidor.
+pypdf==6.19.0
+pypdfium2==5.13.0
+pillow==12.3.0

@@ -1,0 +1,20 @@
+{#
+  Página de error reutilizable. Usa el menú completo si hay sesión y la
+  plantilla pública si no la hay.
+#}
+{% extends "base.html" if current_user.is_authenticated else "base_publica.html" %}
+{% block contenido %}
+<div class="empty">
+  <div class="empty-header">{% block codigo %}{% endblock %}</div>
+  <div class="empty-icon"><i class="ti ti-{% block icono %}alert-circle{% endblock %} fs-1"></i></div>
+  <p class="empty-title">{% block titulo_error %}{% endblock %}</p>
+  <p class="empty-subtitle text-secondary">{% block detalle %}{% endblock %}</p>
+  <div class="empty-action">
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('hub.inicio') }}" class="btn btn-primary"><i class="ti ti-home me-2"></i>Volver al inicio</a>
+    {% else %}
+      <a href="{{ url_for('auth.acceso') }}" class="btn btn-primary"><i class="ti ti-login-2 me-2"></i>Iniciar sesión</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

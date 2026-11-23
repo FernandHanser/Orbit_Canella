@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, origen_sap %}
+{% from "expedientes_seguros/_checklist.html" import avance %}
+{% block titulo %}Llamada {{ llamada.call_id }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('expedientes_seguros.static', filename='visor.css') }}">
+<link rel="stylesheet" href="{{ url_for('expedientes_seguros.static', filename='correos.css') }}">{% endblock %}
+{% block encabezado %}
+  {% set datos_llamada %}
+    <div class="row g-3">
+      {# Etiqueta en gris, valor en negrita: el valor es lo que se busca con la vista. #}
+      <div class="col-auto"><i class="ti ti-hash me-1"></i>Orden <strong class="text-body">{{ llamada.orden }}</strong></div>
+      <div class="col-auto"><i class="ti ti-file-alert me-1"></i>Reclamo <strong class="text-body">{{ llamada.reclamo or "—" }}</strong></div>
+      <div class="col-auto"><i class="ti ti-shield me-1"></i>Póliza <strong class="text-body">{{ llamada.poliza or "—" }}</strong></div>
+      <div class="col-auto"><i class="ti ti-building me-1"></i>Centro de costo <strong class="text-body">{{ llamada.ceco }} · {{ llamada.ceco_nombre|title }}</strong></div>
+    </div>
+  {% endset %}
+  {# El logo de SAP va primero: la llamada y sus datos vienen de SAP Business One. #}
+  {% call encabezado("Llamada " ~ llamada.call_id ~ " · " ~ llamada.aseguradora_nombre, "Expedientes de Seguros · " ~ llamada.aseguradora_codigo, datos_llamada,
+                     origen_sap("Llamada de servicio leída de SAP Business One", "grande")) %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.inicio', ceco=ceco) }}"><i class="ti ti-arrow-left me-2"></i>Otra llamada</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% include "expedientes_seguros/_modo_envio.html" %}
+<div class="alert alert-info alert-dismissible d-none" id="aviso-borrador" role="status">
+  <div class="d-flex">
+    <i class="ti ti-history alert-icon"></i>
+    <div>
+      <h4 class="alert-title">Recuperamos tu trabajo</h4>
+      <div class="text-secondary"><span data-borrador-detalle></span> Si habías adjuntado la factura, vuelve a adjuntarla.</div>
+    </div>
+    <button type="button" class="btn btn-sm ms-auto align-self-center text-nowrap" id="descartar-borrador">Descartar y empezar de nuevo</button>
+  </div>
+</div>
+{% if errores %}
+  <div class="alert alert-danger">
+    <div>
+      <h4 class="alert-title">Revisa antes de generar</h4>
+      <ul class="mb-0">{% for e in errores %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+{% endif %}
+
+<form method="post" action="{{ url_for('expedientes_seguros.generar', call_id=llamada.call_id) }}"
+      enctype="multipart/form-data" novalidate autocomplete="off" data-cargando="Generando paquete…" id="form-paquete"
+      data-borrador="expediente:{{ llamada.call_id }}"{% if errores %} data-con-datos{% endif %}
+      data-confirmar-si="#advertencias[data-hay]"
+      data-confirmar-titulo="¿Generar con pendientes?"
+      data-confirmar="Revisa los pendientes antes de generar."
+      data-confirmar-boton="Generar de todos modos">
+  {# visor.js marca data-hay y escribe el mensaje del modal con lo que falte. #}
+  <span id="advertencias" hidden></span>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="ceco" value="{{ ceco }}">
+  <input type="hidden" name="abierto_en" value="{{ abierto_en }}">
+
+  {# Resumen de la llamada: lo de SAP (solo lectura) y la factura (editable), sin repetir lo que ya
+     dice el título (llamada y aseguradora). #}
+  <div class="card mb-3">
+    <div class="card-header">
+      <h3 class="card-title">Factura</h3>
+      {% if not llamada.facturas %}
+        <div class="card-actions text-secondary small">Sin factura en SAP: escribe la serie y el número</div>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        {% if llamada.facturas|length > 1 or (llamada.facturas and not llamada.factura) %}
+          <div class="col-md-6 col-lg">
+            <label class="form-label" for="factura-sap">Factura en SAP</label>
+            <select class="form-select" id="factura-sap" title="La llamada tiene {{ llamada.facturas|length }} facturas (p. ej. la del deducible): elige la de la aseguradora">
+              <option value="">— Escribir a mano —</option>
+              {% for f in llamada.facturas %}
+                <option data-serie="{{ f.serie }}" data-numero="{{ f.numero }}"{% if f == llamada.factura %} selected{% endif %}>
+                  {{ f.doc_num }} · {{ f.fecha.strftime("%d/%m/%Y") if f.fecha else "" }} · {{ f.cliente }}{% if not f.de_aseguradora %} (no es la aseguradora){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="col-6 col-lg">
+          <label class="form-label required" for="serie">Serie FEL</label>
+          <input class="form-control" id="serie" name="serie" value="{{ correo.serie }}" autocomplete="off" required>
+        </div>
+        <div class="col-6 col-lg">
+          <label class="form-label required" for="numero">Número FEL</label>
+          <input class="form-control" id="numero" name="numero" value="{{ correo.numero }}" autocomplete="off" required>
+        </div>
+        <div class="col-md col-lg-5">
+          <label class="form-label" for="factura">PDF <span class="text-secondary fw-normal">(opcional)</span></label>
+          <input class="form-control" type="file" id="factura" name="factura" accept="application/pdf,.pdf" data-vacio
+                 title="La que se imprime después de recibir el expediente de Taller">
+        </div>
+        <div class="col-auto">
+          <label class="form-check form-switch mb-2" title="Si no, va como primera página del paquete{% if correo.aseguradora_configurada %} (valor según la aseguradora){% endif %}">
+            <input class="form-check-input" type="checkbox" name="factura_separada" value="1"{% if correo.factura_separada %} checked{% endif %}>
+            <span class="form-check-label">En archivo aparte</span>
+          </label>
+        </div>
+      </div>
+      {% if llamada.facturas and not llamada.factura %}
+        <small class="form-hint text-warning">Las facturas de esta llamada no son de la aseguradora: revisa cuál corresponde.</small>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row row-cards">
+    {# ------------------------------------------------------------ páginas #}
+    <div class="col-xl-8 col-paginas">
+      <div class="card">
+        <div class="card-header flex-wrap gap-2">
+          <div>
+            <h3 class="card-title"><i class="ti ti-file-type-pdf me-2 text-red"></i>Expediente: {{ total }} páginas</h3>
+            <div class="text-secondary small">
+              {% for s in secciones %}
+                {{ s.nombre }}{% if s.fecha %} · adjuntado el {{ s.fecha.strftime("%d/%m/%Y") }}{% endif %}{% if not loop.last %} · {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge bg-primary-lt fs-5" id="contador" aria-live="polite">0 de {{ total }}</span>
+            <div class="btn-group" role="group" aria-label="Selección">
+              <button type="button" class="btn btn-sm" data-seleccion="todas"><i class="ti ti-select-all me-1"></i>Todas</button>
+              <button type="button" class="btn btn-sm" data-seleccion="ninguna"><i class="ti ti-square me-1"></i>Ninguna</button>
+              <button type="button" class="btn btn-sm" data-seleccion="invertir"><i class="ti ti-arrows-exchange me-1"></i>Invertir</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body border-bottom py-2 text-secondary small">
+          <i class="ti ti-info-circle me-1"></i><strong>Clic en la página</strong> para leerla en grande y decir qué documento es ·
+          la <strong>casilla</strong> la incluye en el paquete (<kbd>Mayús</kbd> + clic en otra casilla marca el rango).
+          Un documento puede ocupar varias páginas. El PDF original de SAP no se modifica.
+        </div>
+        <div class="card-body cuerpo-paginas">
+          <div class="rejilla-paginas" id="rejilla-paginas">
+            {% for s in secciones %}
+              {% if secciones|length > 1 %}
+                <div class="rejilla-seccion-titulo w-100"><i class="ti ti-paperclip me-1"></i>{{ s.nombre }}</div>
+              {% endif %}
+              {% for n in range(s.inicio, s.fin + 1) %}
+                {% set local = n - s.inicio + 1 %}
+                {% set src = url_for('expedientes_seguros.imagen_pagina', call_id=llamada.call_id, linea=s.linea, pagina=local) %}
+                <div class="pagina-expediente{% if n in seleccion %} seleccionada{% endif %}">
+                  <input class="form-check-input pagina-check" type="checkbox" name="paginas" value="{{ n }}"{% if n in seleccion %} checked{% endif %}
+                         aria-label="Incluir la página {{ n }} en el paquete" title="Incluir en el paquete">
+                  <button type="button" class="pagina-abrir" title="Abrir la página {{ n }} para leerla"
+                          data-ampliar="{{ url_for('expedientes_seguros.imagen_pagina', call_id=llamada.call_id, linea=s.linea, pagina=local, tamano='ampliada') }}"
+                          data-pagina="{{ n }}">
+                    <span class="pagina-cargando" aria-hidden="true"><span class="spinner-border spinner-border-sm text-secondary"></span></span>
+                    <img src="{{ src }}" alt="Página {{ n }}" loading="lazy" width="180" height="233">
+                  </button>
+                  <input type="hidden" class="pagina-doc" name="doc_{{ n }}" value="{{ asignaciones.get(n, [])|join(',') }}">
+                  <div class="pagina-etiqueta text-truncate" title=""></div>
+                  <div class="pagina-pie"><span>Pág. {{ n }}</span></div>
+                </div>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ------------------------------------------------------------ checklist en vivo #}
+    <div class="col-xl-4">
+        <div class="card h-100" id="checklist">
+          <div class="card-header">
+            <h3 class="card-title"><i class="ti ti-list-check me-2"></i>Checklist</h3>
+          </div>
+          {% if documentos %}
+            <div class="card-body py-3 border-bottom">{{ avance(llamada.aseguradora_nombre, "panel") }}</div>
+            <div class="alert alert-info small py-2 mx-3 mt-3 mb-0" id="checklist-por-asignar" role="status" hidden>
+              <i class="ti ti-hand-click me-1"></i><strong data-por-asignar-paginas></strong>: clic en el documento que son.
+            </div>
+            <div class="list-group list-group-flush checklist-documentos">
+              {% for d in documentos %}
+                <div class="list-group-item py-2" data-documento="{{ d.id }}" data-obligatorio="{{ 1 if d.obligatorio else 0 }}"
+                     data-factura="{{ 1 if d.es_factura else 0 }}" data-nombre="{{ d.nombre }}">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="ti ti-circle checklist-icono text-secondary" aria-hidden="true"></i>
+                    <span class="flex-fill small">{{ d.nombre }}</span>
+                    <span class="checklist-estado small text-secondary text-nowrap"></span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="card-footer">
+              <div class="small text-secondary mb-3" data-ayuda-checklist>
+                Marca las páginas con su casilla y haz clic aquí en el documento que son, o abre una página para leerla
+                y asignarla desde la vista grande: es la misma selección. «Factura original» se cumple al adjuntar el PDF de la factura.
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-ghost-danger text-nowrap" data-cancelar-armado
+                        title="Descarta toda la selección: páginas y documentos asignados">
+                  <i class="ti ti-x me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success flex-fill text-nowrap" data-ir-correo hidden>
+                  <i class="ti ti-mail-forward me-2"></i>Ir al correo
+                </button>
+              </div>
+            </div>
+          {% else %}
+            <div class="card-body small text-secondary">
+              {{ llamada.aseguradora_codigo }} no tiene checklist configurado. Un administrador lo agrega en Aseguradoras y correo.
+            </div>
+          {% endif %}
+        </div>
+
+    </div>
+
+    {# ------------------------------------------------------------ correo (a todo el ancho) #}
+    <div class="col-12">
+      <div class="card" id="correo">
+        <div class="card-header">
+          <h3 class="card-title"><i class="ti ti-mail-forward me-2"></i>Correo a Créditos y Cobros</h3>
+          <div class="card-actions text-secondary small">
+            Borrador · se abre en tu Outlook para revisarlo y enviarlo{% if not correo.aseguradora_configurada %} · correo por defecto (la aseguradora no tiene plantilla propia){% endif %}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <label class="form-label required" for="para">Para</label>
+              <textarea class="form-control" id="para" name="para" rows="2" data-correos>{{ correo.para }}</textarea>
+              <small class="form-hint">Escribe cada correo y pulsa Enter. La ✕ lo quita.</small>
+            </div>
+            <div class="col-lg-6">
+              <label class="form-label" for="cc">CC</label>
+              <textarea class="form-control" id="cc" name="cc" rows="2" data-correos>{{ correo.cc }}</textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label required" for="asunto">Asunto</label>
+              <input class="form-control" id="asunto" name="asunto" value="{{ correo.asunto }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="cuerpo">Cuerpo</label>
+              <textarea class="form-control" id="cuerpo" name="cuerpo" rows="6">{{ correo.cuerpo }}</textarea>
+              <small class="form-hint">
+                Adjunto: <strong>{{ nombre_sugerido }}</strong>. Si cambias la Serie o el Número de la factura, revisa que coincidan en el asunto y el cuerpo. Nada se envía desde aquí.
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <button type="submit" class="btn btn-primary"><i class="ti ti-file-certificate me-2"></i>Generar paquete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{# Los modales van fuera de «contenido» (ver la nota en templates/base.html): dentro de
+   «.container-xl» no llenan el alto de la ventana y el pie queda fuera de la vista. #}
+{% block modales %}
+{# Vista ampliada de una página #}
+<div class="modal modal-blur fade" id="modal-pagina" tabindex="-1" aria-hidden="true" aria-labelledby="modal-pagina-titulo">
+  <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header gap-2">
+        <h3 class="modal-title" id="modal-pagina-titulo">Página</h3>
+        <div class="btn-group ms-auto" role="group" aria-label="Tamaño">
+          <button type="button" class="btn btn-sm active" data-zoom="ajustar"><i class="ti ti-arrows-horizontal me-1"></i>Ajustar al ancho</button>
+          <button type="button" class="btn btn-sm" data-zoom="real"><i class="ti ti-zoom-in me-1"></i>Tamaño real</button>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="d-flex flex-column flex-lg-row h-100">
+          <div class="flex-fill text-center bg-body-tertiary position-relative p-3 modal-pagina-lienzo">
+            <div class="modal-pagina-cargando" id="modal-pagina-cargando" role="status">
+              <span class="spinner-border text-secondary"></span><span class="visually-hidden">Cargando página…</span>
+            </div>
+            <div class="pagina-hoja">
+              <img id="modal-pagina-imagen" class="img-fluid shadow-sm" alt="">
+              {# Sello con lo que ya es esta página (visor.js); no tapa la lectura: transparente y sin clics. #}
+              <div class="pagina-sello" id="modal-pagina-sello" aria-hidden="true" hidden></div>
+            </div>
+          </div>
+          {% if documentos %}
+            <aside class="modal-checklist border-start" aria-label="Checklist del expediente">
+              <div class="p-3 border-bottom">
+                {{ avance(llamada.aseguradora_nombre, "vista") }}
+                <div class="text-secondary small mt-2" id="modal-ayuda-checklist">Clic en un documento para agregarlo o quitarlo de esta página. Una página puede tener varios.</div>
+                <div class="alert alert-info small py-2 mt-2 mb-0" id="modal-por-asignar" role="status" hidden>
+                  <i class="ti ti-hand-click me-1"></i><strong data-por-asignar-pagina></strong>: clic en el documento que es.
+                </div>
+              </div>
+              <div class="list-group list-group-flush" id="modal-checklist"></div>
+            </aside>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer pie-visor">
+        {# Cancelar a la izquierda; a la derecha «Igual que la anterior» y, al final, la navegación.
+           Los documentos se asignan desde el checklist del costado. #}
+        <div class="pie-izquierda">
+          <button type="button" class="btn btn-ghost-danger text-nowrap" id="modal-pagina-liberar" data-cancelar-armado
+                  title="Descarta toda la selección: páginas y documentos asignados">
+            <i class="ti ti-x me-2"></i>Cancelar
+          </button>
+        </div>
+        <div class="pie-derecha">
+          {% if documentos %}
+            <button type="button" class="btn text-nowrap" id="modal-pagina-igual" title="Asignar los mismos documentos que la página anterior (A)">
+              <i class="ti ti-copy me-2"></i>Igual que la anterior
+            </button>
+          {% endif %}
+          <div class="btn-group" role="group" aria-label="Navegación entre páginas">
+            <button type="button" class="btn" data-navegar="-1" title="Página anterior (←)" aria-label="Página anterior">
+              <i class="ti ti-chevron-left"></i>
+            </button>
+            <span class="btn disabled text-reset fw-bold text-nowrap" id="modal-pagina-posicion" aria-live="polite">1 de {{ total }}</span>
+            <button type="button" class="btn" data-navegar="1" title="Página siguiente (→)" aria-label="Página siguiente">
+              <i class="ti ti-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Checklist completo: aparece al cumplirse el último obligatorio (también sobre la vista grande). #}
+<div class="modal modal-blur fade" id="modal-completo" tabindex="-1" aria-hidden="true" aria-labelledby="modal-completo-titulo">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-circle-check text-green mb-2 modal-confirmar-icono" aria-hidden="true"></i>
+        <h3 id="modal-completo-titulo">Checklist completo</h3>
+        <div class="text-secondary" data-completo-mensaje></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Seguir revisando</button></div>
+            <div class="col"><button type="button" class="btn btn-success w-100" data-ir-correo><i class="ti ti-mail-forward me-2"></i>Ir al correo</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('expedientes_seguros.static', filename='visor.js') }}"></script>
+{# Después de visor.js: las fichas se arman con el borrador ya restaurado. #}
+<script src="{{ url_for('expedientes_seguros.static', filename='correos.js') }}"></script>
+{% endblock %}

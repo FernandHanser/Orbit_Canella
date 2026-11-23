@@ -1,0 +1,33 @@
+{# Tabla de eventos de log. Espera la variable ``eventos`` (lista de dict). #}
+{% from "_macros.html" import nivel_log %}
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-sm tabla-logs">
+    <thead>
+      <tr><th>Fecha y hora</th><th>Nivel</th><th>Módulo</th><th>Evento</th><th>Mensaje</th><th>Usuario</th><th>Ejecución</th></tr>
+    </thead>
+    <tbody>
+      {% for e in eventos %}
+        <tr>
+          <td class="celda-ts small">{{ e.ts[:10] }} {{ e.ts[11:23] }}</td>
+          <td>{{ nivel_log(e.nivel) }}</td>
+          <td><a class="font-monospace small" href="{{ url_for('admin.logs', modulo=e.modulo, dias=7) }}">{{ e.modulo }}</a></td>
+          <td class="font-monospace small">{{ e.evento or "—" }}</td>
+          <td class="log-mensaje small">
+            {#- El texto conserva sus saltos de línea propios; el espacio de la plantilla no entra. -#}
+            <span class="log-texto">{{ e.mensaje }}</span>
+            {%- if e.datos %}<div class="log-datos text-secondary font-monospace">{{ e.datos|tojson }}</div>{% endif %}
+            {%- if e.traza %}<details class="log-detalle"><summary class="text-danger">Traza</summary><div class="log-traza">{{ e.traza }}</div></details>{% endif %}
+          </td>
+          <td class="small">{{ e.usuario or "—" }}</td>
+          <td>
+            {% if e.ejecucion_id %}
+              <a class="font-monospace small" href="{{ url_for('admin.logs', ejecucion_id=e.ejecucion_id, dias=31) }}" title="Ver todos los eventos de esta ejecución">{{ e.ejecucion_id[:8] }}</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-center text-secondary py-4">No hay eventos con esos filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

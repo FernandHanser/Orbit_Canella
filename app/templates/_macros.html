@@ -1,0 +1,119 @@
+{# Macros comunes de interfaz. Uso: {% from "_macros.html" import campo, mensajes %} #}
+
+{% macro mensajes() %}
+  {% with lista = get_flashed_messages(with_categories=true) %}
+    {% for categoria, mensaje in lista %}
+      {% set cat = categoria if categoria in ["success", "danger", "warning", "info"] else "info" %}
+      {% set icono = {"success": "circle-check", "danger": "alert-circle", "warning": "alert-triangle", "info": "info-circle"}[cat] %}
+      <div class="alert alert-{{ cat }} alert-dismissible" role="alert">
+        <div class="d-flex">
+          <i class="ti ti-{{ icono }} alert-icon"></i>
+          <div>{{ mensaje }}</div>
+        </div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></a>
+      </div>
+    {% endfor %}
+  {% endwith %}
+{% endmacro %}
+
+{% macro campo(f, ayuda=None, autocomplete=None, autofocus=False) %}
+  <div class="mb-3">
+    <label class="form-label{% if f.flags.required %} required{% endif %}" for="{{ f.id }}">{{ f.label.text }}</label>
+    {{ f(class_="form-control" ~ (" is-invalid" if f.errors else ""), autocomplete=autocomplete, autofocus=autofocus, **kwargs) }}
+    {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+    {% if ayuda %}<small class="form-hint">{{ ayuda }}</small>{% endif %}
+  </div>
+{% endmacro %}
+
+{% macro interruptor(f, ayuda=None) %}
+  <div class="mb-3">
+    <label class="form-check form-switch">
+      {{ f(class_="form-check-input") }}
+      <span class="form-check-label">{{ f.label.text }}</span>
+    </label>
+    {% if ayuda %}<small class="form-hint">{{ ayuda }}</small>{% endif %}
+  </div>
+{% endmacro %}
+
+{% macro estado_ejecucion(estado) %}
+  {% set mapa = {"exito": ("green", "Éxito"), "advertencia": ("yellow", "Advertencia"), "error": ("red", "Error"), "en_curso": ("blue", "En curso"), "interrumpida": ("orange", "Interrumpida"), "sin_cambios": ("secondary", "Sin cambios")} %}
+  {% set par = mapa.get(estado, ("secondary", estado)) %}
+  <span class="badge bg-{{ par[0] }}-lt">{{ par[1] }}</span>
+{% endmacro %}
+
+{#
+  Avatar de una persona: iniciales sobre su color fijo (STOD no tiene fotos).
+  tamano: "" (normal), "xs", "sm", "md", "lg", "xl".
+#}
+{% macro avatar_persona(u, tamano="") %}
+  <span class="avatar avatar-rounded{% if tamano %} avatar-{{ tamano }}{% endif %} bg-{{ u.color_avatar }}-lt flex-shrink-0"
+        title="{{ u.nombre_completo }}" aria-hidden="true">{{ u.iniciales }}</span>
+{% endmacro %}
+
+{% macro nivel_log(nivel) %}
+  {% set color = {"DEBUG": "secondary", "INFO": "blue", "WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}.get(nivel, "secondary") %}
+  <span class="badge bg-{{ color }}-lt">{{ nivel }}</span>
+{% endmacro %}
+
+{#
+  Pie con paginación (Tabler). ``p`` es una paginación de SQLAlchemy o una PaginaLista
+  (app/core/paginacion.py). Conserva los filtros de la URL al cambiar de página.
+#}
+{% macro paginacion(p, nombre="registros") %}
+  {% if p.total %}
+    <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+      <p class="m-0 text-secondary small">
+        Mostrando <span>{{ (p.page - 1) * p.per_page + 1 }}</span>–<span>{{ [p.page * p.per_page, p.total]|min }}</span>
+        de <span>{{ p.total }}</span> {{ nombre }}
+      </p>
+      {% if p.pages > 1 %}
+        <ul class="pagination m-0 ms-auto">
+          <li class="page-item{% if not p.has_prev %} disabled{% endif %}">
+            <a class="page-link" href="{{ url_pagina(p.page - 1) if p.has_prev else '#' }}" aria-label="Anterior"{% if not p.has_prev %} tabindex="-1" aria-disabled="true"{% endif %}>
+              <i class="ti ti-chevron-left"></i> anterior
+            </a>
+          </li>
+          {% set anterior = namespace(n=0) %}
+          {% for n in range(1, p.pages + 1) %}
+            {% if n <= 1 or n >= p.pages or (n >= p.page - 2 and n <= p.page + 2) %}
+              {% if anterior.n and n - anterior.n > 1 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+              {% endif %}
+              <li class="page-item{% if n == p.page %} active{% endif %}">
+                <a class="page-link" href="{{ url_pagina(n) }}"{% if n == p.page %} aria-current="page"{% endif %}>{{ n }}</a>
+              </li>
+              {% set anterior.n = n %}
+            {% endif %}
+          {% endfor %}
+          <li class="page-item{% if not p.has_next %} disabled{% endif %}">
+            <a class="page-link" href="{{ url_pagina(p.page + 1) if p.has_next else '#' }}" aria-label="Siguiente"{% if not p.has_next %} tabindex="-1" aria-disabled="true"{% endif %}>
+              siguiente <i class="ti ti-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{# origen: HTML que va primero, a la izquierda del título y el subtítulo (p. ej. origen_sap("grande")). #}
+{% macro encabezado(titulo, pretitulo=None, subtitulo=None, origen=None) %}
+  <div class="page-header d-print-none">
+    <div class="container-xl">
+      <div class="row g-2 align-items-center">
+        {% if origen %}<div class="col-auto align-self-end encabezado-origen">{{ origen }}</div>{% endif %}
+        <div class="col">
+          {% if pretitulo %}<div class="page-pretitle">{{ pretitulo }}</div>{% endif %}
+          <h2 class="page-title">{{ titulo }}</h2>
+          {% if subtitulo %}<div class="page-subtitle">{{ subtitulo }}</div>{% endif %}
+        </div>
+        {% if caller %}<div class="col-auto ms-auto d-print-none"><div class="btn-list">{{ caller() }}</div></div>{% endif %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{# Origen de los datos: logo de SAP delante de datos leídos de SAP Business One (encabezados, tarjetas). #}
+{% macro origen_sap(detalle="Datos tomados de SAP Business One", tamano="") %}
+  <img class="logo-sap{% if tamano %} logo-sap-{{ tamano }}{% endif %}" src="{{ url_for('static', filename='img/SAP-Logo.svg.webp') }}" alt="SAP" title="{{ detalle }}">
+{% endmacro %}

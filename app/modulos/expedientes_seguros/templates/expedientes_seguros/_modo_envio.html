@@ -1,0 +1,17 @@
+{# Aviso del modo de envío en las pantallas del módulo (modo_envio lo inyecta views._modo_envio). #}
+{% set modo = modo_envio() %}
+{% if modo.prueba %}
+  <div class="alert alert-warning modo-envio" role="status">
+    <div class="d-flex align-items-center gap-3">
+      <i class="ti ti-flask alert-icon fs-1"></i>
+      <div>
+        <h4 class="alert-title mb-1"><span class="badge bg-yellow text-yellow-fg me-2">MODO PRUEBA</span>Los correos no llegan a Cobros</h4>
+        <div class="text-secondary">Todo correo enviado desde aquí va solo a <strong class="text-body">{{ modo.destino_prueba }}</strong>, con «[PRUEBA]» en el asunto.</div>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="mb-3 small text-secondary modo-envio">
+    <span class="badge bg-green-lt me-1"><i class="ti ti-circle-check me-1"></i>PRODUCCIÓN</span>Los correos van a los destinatarios reales.
+  </div>
+{% endif %}

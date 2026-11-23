@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% block titulo %}Catálogo de módulos{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Catálogo de módulos", "Administración") %}
+    <form method="post" action="{{ url_for('admin.modulos_sincronizar') }}" class="d-inline" data-cargando="Sincronizando…">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn"><i class="ti ti-refresh me-2"></i>Sincronizar con el código</button>
+    </form>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Módulo</th>
+          <th>Ruta</th>
+          <th>Permiso</th>
+          <th>Usuarios</th>
+          <th>Estado</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in filas %}
+          {% set info = f.definicion or f.catalogo %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <span class="avatar avatar-sm bg-primary-lt me-3"><i class="ti ti-{{ info.icono }}"></i></span>
+                <div>
+                  <div class="fw-bold">
+                    {{ info.nombre }}
+                    {% if f.definicion and f.definicion.es_ejemplo %}<span class="badge bg-yellow-lt ms-1">Ejemplo</span>{% endif %}
+                  </div>
+                  <div class="text-secondary small">{{ info.descripcion }}</div>
+                  <div class="text-secondary small font-monospace">{{ f.id }}{% if f.definicion %} · v{{ f.definicion.version }}{% endif %}</div>
+                </div>
+              </div>
+            </td>
+            <td class="font-monospace small">{{ f.definicion.ruta if f.definicion else "—" }}</td>
+            <td class="font-monospace small">{{ info.permiso }}</td>
+            <td>{{ f.usuarios }}</td>
+            <td>
+              {% if f.definicion is none %}
+                <span class="badge bg-red-lt" title="Está en la base de datos pero no hay código registrado">Sin código</span>
+              {% elif f.catalogo is none %}
+                <span class="badge bg-yellow-lt" title="Registrado en código; falta sincronizar">Sin sincronizar</span>
+              {% elif f.catalogo.activo %}
+                <span class="badge bg-green-lt">Habilitado</span>
+              {% else %}
+                <span class="badge bg-secondary-lt">Deshabilitado</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if f.catalogo %}
+                {# Deshabilitar bloquea el módulo para todos sus usuarios: se confirma. Habilitar no. #}
+                <form method="post" action="{{ url_for('admin.modulo_estado', modulo_id=f.id) }}"
+                      data-cargando="{{ 'Deshabilitando…' if f.catalogo.activo else 'Habilitando…' }}"
+                      {% if f.catalogo.activo %}data-confirmar-titulo="¿Deshabilitar «{{ info.nombre }}»?"
+                      data-confirmar="Nadie podrá entrar a sus pantallas ni a su API, y sus tareas programadas se omitirán hasta que se habilite de nuevo. Las asignaciones de usuarios se conservan."
+                      data-confirmar-boton="Sí, deshabilitar"{% endif %}>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="activo" value="{{ '0' if f.catalogo.activo else '1' }}">
+                  <button type="submit" class="btn btn-sm">{{ "Deshabilitar" if f.catalogo.activo else "Habilitar" }}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-secondary py-4">No hay módulos registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer text-secondary small">
+    El nombre, la descripción, el ícono y las rutas vienen del código de cada módulo (<span class="font-monospace">app/modulos/&lt;id&gt;/__init__.py</span>).
+    Aquí se decide si el módulo está disponible; el acceso de cada persona se asigna en <a href="{{ url_for('admin.usuarios') }}">Usuarios y permisos</a>.
+    Deshabilitar un módulo bloquea todas sus rutas y APIs para todos, sin borrar las asignaciones.
+  </div>
+</div>
+{% endblock %}

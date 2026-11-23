@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv.old/
+venv/
+.pytest_cache/
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Logs locales
+logs/
+
+# Archivos de trabajo de los módulos (p. ej. PDF de expedientes de seguros: datos personales)
+instance/
+
+# Material de levantamiento con datos reales (correos, expedientes, DPI): no se versiona
+contexto/
+
+# Herramientas locales: cobertura y permisos de Claude Code de esta máquina (rutas y comandos propios)
+.coverage
+htmlcov/
+.claude/settings.local.json

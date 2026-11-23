@@ -1,0 +1,9 @@
+{% extends "errores/_pagina.html" %}
+{% block titulo %}Módulo no disponible{% endblock %}
+{% block codigo %}503{% endblock %}
+{% block icono %}plug-connected-x{% endblock %}
+{% block titulo_error %}Módulo no disponible{% endblock %}
+{% block detalle %}
+  {% if definicion %}El módulo «{{ definicion.nombre }}»{% else %}Este módulo{% endif %}
+  está deshabilitado temporalmente o aún no se ha activado en el catálogo. Intenta más tarde o consulta al administrador del hub.
+{% endblock %}

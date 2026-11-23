@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% block titulo %}Inicio{% endblock %}
+{% block encabezado %}{{ encabezado("Hola, " ~ current_user.primer_nombre, SUBTITULO_PRODUCTO) }}{% endblock %}
+{% block contenido %}
+{% if tarjetas %}
+  {% set estados = {
+       "exito": ("green", "Última revisión"), "sin_cambios": ("green", "Última revisión"),
+       "advertencia": ("yellow", "Con advertencias"), "error": ("red", "Falló"),
+       "en_curso": ("blue", "En curso desde"), "interrumpida": ("orange", "Interrumpida"),
+     } %}
+  <h2 class="h3 mb-3">Mis automatizaciones</h2>
+  <div class="row row-cards">
+    {% for t in tarjetas %}
+      {% set d = t.modulo.definicion %}
+      <div class="col-sm-6 col-lg-4">
+        <a class="card card-link card-link-pop tarjeta-modulo text-reset text-decoration-none h-100" href="{{ url_for(d.endpoint_inicio) }}">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-3">
+              <span class="avatar icono-modulo bg-primary-lt flex-shrink-0" aria-hidden="true"><i class="ti ti-{{ d.icono }}"></i></span>
+              <div>
+                <h3 class="card-title mb-1">
+                  {{ d.nombre|upper }}
+                  {% if d.es_ejemplo %}<span class="badge bg-yellow-lt ms-1">Ejemplo</span>{% endif %}
+                </h3>
+                <div class="text-secondary small lh-sm">{{ d.descripcion }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer d-flex align-items-center small text-secondary py-2">
+            {% if t.ultima %}
+              {% set par = estados.get(t.ultima.estado, ("secondary", t.ultima.estado)) %}
+              <span class="status-dot status-{{ par[0] }}{% if t.ultima.estado == 'en_curso' %} status-dot-animated{% endif %} me-2"></span>
+              <span title="{{ t.ultima.inicio|fecha('%d/%m/%Y %H:%M') }}">{{ par[1] }} {{ t.ultima.inicio|hace }}</span>
+            {% else %}
+              <span class="status-dot status-secondary me-2"></span><span>Sin ejecuciones</span>
+            {% endif %}
+            <span class="ms-auto text-primary">Abrir <i class="ti ti-chevron-right"></i></span>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon"><i class="ti ti-lock-access fs-1"></i></div>
+    <p class="empty-title">Aún no tienes automatizaciones asignadas</p>
+    <p class="empty-subtitle text-secondary">
+      Solicita al administrador del hub que te asigne acceso a los módulos que necesitas.
+    </p>
+    {% if current_user.es_admin %}
+      <div class="empty-action">
+        <a href="{{ url_for('admin.usuario_editar', usuario_id=current_user.id) }}" class="btn btn-primary">
+          <i class="ti ti-user-cog me-2"></i>Asignarme módulos
+        </a>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

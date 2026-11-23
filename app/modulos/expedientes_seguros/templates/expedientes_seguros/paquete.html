@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% block titulo %}Paquete {{ paquete.call_id }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Paquete de la llamada " ~ paquete.call_id, "Expedientes de Seguros") %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.inicio') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% include "expedientes_seguros/_modo_envio.html" %}
+<span hidden data-borrar-borrador="expediente:{{ paquete.call_id }}:"></span>
+<div class="row row-cards">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Listo para enviar</h3></div>
+      <div class="card-body">
+        {% if vencido %}
+          <div class="alert alert-secondary mb-0"><div>Los archivos se borraron a los {{ retencion }} días (contienen datos personales).
+            Si hace falta, vuelve a generar el paquete desde la llamada.</div></div>
+        {% else %}
+          {% set modo = modo_envio() %}
+          {% if paquete.enviado_en %}
+            <div class="alert alert-success mb-2"><div><i class="ti ti-circle-check me-2"></i>Correo enviado el {{ paquete.enviado_en|fecha("%d/%m/%Y %H:%M") }}.</div></div>
+          {% elif modo.prueba %}
+            <form method="post" action="{{ url_for('expedientes_seguros.enviar', paquete_id=paquete.id) }}" data-cargando="Enviando prueba…">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-warning w-100 mb-2"><i class="ti ti-flask me-2"></i>Enviar correo de PRUEBA</button>
+            </form>
+            <div class="text-secondary small mb-3">Llega solo a <strong>{{ modo.destino_prueba }}</strong>. Cobros no lo recibe y el paquete queda pendiente.</div>
+          {% else %}
+            <form method="post" action="{{ url_for('expedientes_seguros.enviar', paquete_id=paquete.id) }}" data-cargando="Enviando…">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-primary w-100 mb-2"><i class="ti ti-send me-2"></i>Enviar correo</button>
+            </form>
+            <div class="text-secondary small mb-3">Sale desde el buzón de automatizaciones con los adjuntos; las respuestas te llegan a ti.</div>
+          {% endif %}
+          <a class="btn w-100 mb-2" href="{{ url_for('expedientes_seguros.correo', paquete_id=paquete.id) }}">
+            <i class="ti ti-mail-forward me-2"></i>Abrir en Outlook (.eml)
+          </a>
+          <div class="text-secondary small mb-3">Alternativa: se abre como correo nuevo desde tu cuenta para enviarlo desde Outlook.</div>
+          <div class="list-group list-group-flush">
+            {% for a in archivos %}
+              <a class="list-group-item list-group-item-action d-flex align-items-center"
+                 href="{{ url_for('expedientes_seguros.descargar', paquete_id=paquete.id, nombre=a.nombre) }}">
+                <i class="ti ti-file-type-pdf text-red me-2"></i><span class="text-break">{{ a.nombre }}</span>
+                <i class="ti ti-download ms-auto"></i>
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <div class="datagrid">
+          <div><div class="datagrid-title">Aseguradora</div><div>{{ paquete.aseguradora_nombre }} ({{ paquete.aseguradora_codigo }})</div></div>
+          <div><div class="datagrid-title">Llamada / Orden</div><div>{{ paquete.call_id }} / {{ paquete.orden }}</div></div>
+          <div><div class="datagrid-title">Factura</div><div>Serie {{ paquete.factura_serie }} · Número {{ paquete.factura_numero }}</div></div>
+          <div><div class="datagrid-title">Reclamo / Póliza</div><div>{{ paquete.reclamo or "—" }} / {{ paquete.poliza or "—" }}</div></div>
+          <div><div class="datagrid-title">Páginas</div><div>{{ paquete.paginas }} ({{ paquete.cantidad_paginas }} de {{ paquete.total_paginas }})</div></div>
+          <div><div class="datagrid-title">Factura en el paquete</div><div>{% if not paquete.con_factura %}No adjuntada{% elif paquete.factura_separada %}Archivo separado{% else %}Primera página{% endif %}</div></div>
+          <div><div class="datagrid-title">Generado</div><div>{{ paquete.creado_en|fecha("%d/%m/%Y %H:%M") }}{% if paquete.segundos_armado %} · {{ paquete.segundos_armado }} s de armado{% endif %}</div></div>
+        </div>
+        {% if checklist %}
+          <div class="hr-text">Checklist al generar</div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-3">
+              <tbody>
+                {% for d in checklist %}
+                  <tr>
+                    <td class="w-1">
+                      {% if d.presente %}<i class="ti ti-circle-check text-green"></i>{% elif d.obligatorio %}<i class="ti ti-circle-x text-red"></i>{% else %}<i class="ti ti-circle text-secondary"></i>{% endif %}
+                    </td>
+                    <td class="small">{{ d.documento }}{% if not d.obligatorio %} <span class="text-secondary">(si aplica)</span>{% endif %}</td>
+                    <td class="small text-end text-nowrap {{ 'text-green' if d.presente else ('text-red' if d.obligatorio else 'text-secondary') }}">
+                      {% if d.paginas %}pág. {{ d.paginas }}{% elif d.factura %}PDF adjunto{% elif d.obligatorio %}Faltó{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+        <div class="hr-text">Correo</div>
+        <dl class="row mb-0 small">
+          <dt class="col-2">Para</dt><dd class="col-10 text-break">{{ paquete.para }}</dd>
+          {% if paquete.cc %}<dt class="col-2">CC</dt><dd class="col-10 text-break">{{ paquete.cc }}</dd>{% endif %}
+          <dt class="col-2">Asunto</dt><dd class="col-10 text-break">{{ paquete.asunto }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('expedientes_seguros.static', filename='borrador.js') }}"></script>{% endblock %}

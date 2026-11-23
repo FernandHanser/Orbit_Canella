@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, estado_ejecucion %}
+{% block titulo %}Módulo de ejemplo{% endblock %}
+{% block encabezado %}{{ encabezado("Módulo de ejemplo", "Demostración técnica") }}{% endblock %}
+{% block contenido %}
+<div class="alert alert-warning">
+  <div class="d-flex">
+    <i class="ti ti-flask alert-icon"></i>
+    <div>
+      <h4 class="alert-title">Este es un módulo de ejemplo</h4>
+      <div class="text-secondary">
+        Sirve para demostrar cómo se registra un módulo, cómo el hub protege sus rutas web y API, y cómo se
+        registran sus ejecuciones y logs. No procesa ni muestra datos contables.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-lg-5">
+    <form class="card" method="post" action="{{ url_for('ejemplo.ejecutar') }}" data-cargando="Ejecutando…">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><h3 class="card-title">Ejecutar tarea de demostración</h3></div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label" for="pasos">Número de pasos</label>
+          <input class="form-control" type="number" min="0" max="20" name="pasos" id="pasos" value="3">
+          <small class="form-hint">Con 0 pasos la ejecución termina con advertencia.</small>
+        </div>
+        <label class="form-check">
+          <input class="form-check-input" type="checkbox" name="fallar" value="1">
+          <span class="form-check-label">Simular un error (para ver la traza en los logs)</span>
+        </label>
+      </div>
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-player-play me-2"></i>Ejecutar</button>
+      </div>
+    </form>
+
+    <div class="card mt-3">
+      <div class="card-header"><h3 class="card-title">API del módulo</h3></div>
+      <div class="card-body small">
+        <p>Las rutas de API heredan la misma protección: sin sesión responden <code>401</code> y sin permiso <code>403</code>.</p>
+        <ul class="mb-2">
+          <li><code>GET {{ url_for('ejemplo.api.estado') }}</code> — <a href="{{ url_for('ejemplo.api.estado') }}" target="_blank" rel="noopener">abrir</a></li>
+          <li><code>POST {{ url_for('ejemplo.api.crear_ejecucion') }}</code> — requiere la cabecera <code>X-CSRFToken</code></li>
+        </ul>
+        <p class="text-secondary mb-0">Ejecución sin sesión web: <code>flask --app wsgi tareas ejecutar ejemplo demo --proceso prueba</code></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Mis últimas ejecuciones</h3></div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th>Inicio</th><th>Estado</th><th>Resultado / error</th><th>Identificador</th></tr></thead>
+          <tbody>
+            {% for e in ejecuciones %}
+              <tr>
+                <td class="celda-ts small">{{ e.inicio|fecha("%d/%m/%Y %H:%M:%S") }}</td>
+                <td>{{ estado_ejecucion(e.estado) }}</td>
+                <td class="small text-break">{{ e.error or e.resultado or "—" }}</td>
+                <td class="font-monospace small">{{ e.id[:8] }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" class="text-center text-secondary py-4">Aún no has ejecutado la tarea de demostración.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{# Piezas de los formularios de correo. Requieren correos.js y correos.css (se cargan con estilos() y script()). #}
+
+{# Variables de la plantilla (claves de reglas.VARIABLES): nombre para la persona y un valor de
+   ejemplo (llamada 51595 de La Ceiba) para la vista previa. #}
+{% set NOMBRES_VARIABLES = {
+  "aseguradora": "Aseguradora", "serie": "Serie de factura", "numero": "Número de factura",
+  "reclamo": "Reclamo", "poliza": "Póliza", "llamada": "Llamada", "orden": "Orden",
+} %}
+{% set EJEMPLOS_VARIABLES = {
+  "aseguradora": "ASEGURADORA LA CEIBA, S. A.", "serie": "206FB68E", "numero": "3826795546",
+  "reclamo": "202604763", "poliza": "0224103497-14", "llamada": "51595", "orden": "100129274",
+} %}
+
+{# Una sola barra de datos para el asunto y el cuerpo: inserta donde está el cursor, en el último
+   de los dos campos que se tocó (con los espacios que falten). La etiqueta dice cuál. #}
+{% macro barra_datos(asunto="asunto", cuerpo="cuerpo") %}
+  <div class="variables-correo mb-3" data-barra-datos data-destinos="{{ asunto }},{{ cuerpo }}">
+    <span class="small fw-bold me-1"><i class="ti ti-braces me-1"></i>Insertar dato en</span>
+    <span class="badge bg-azure text-white me-2" data-destino-actual>Asunto</span>
+    {% for clave, nombre in NOMBRES_VARIABLES.items() %}
+      <button type="button" class="btn btn-sm" data-insertar="{{ '{' ~ clave ~ '}' }}"
+              title="Se reemplaza por {{ nombre|lower }} de cada llamada (p. ej. {{ EJEMPLOS_VARIABLES[clave] }})"><i class="ti ti-plus me-1"></i>{{ nombre }}</button>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{# Una sola vista previa: el correo completo (asunto y cuerpo) con datos de ejemplo, sin {llaves}. #}
+{# defectos: {para, cc, asunto, cuerpo} del correo por defecto; un campo vacío muestra ese valor, marcado. #}
+{% macro vista_previa(asunto="asunto", cuerpo="cuerpo", para="para", cc="cc", defectos=None) %}
+  {% set d = defectos or {} %}
+  <div class="vista-previa-correo" data-vista-previa data-asunto="{{ asunto }}" data-cuerpo="{{ cuerpo }}"
+       data-para="{{ para }}" data-cc="{{ cc }}" data-ejemplos='{{ EJEMPLOS_VARIABLES|tojson }}'
+       data-defectos='{{ {"para": d.para or "", "cc": d.cc or "", "asunto": d.asunto or "", "cuerpo": d.cuerpo or ""}|tojson }}'>
+    <div class="vista-previa-encabezado">
+      <i class="ti ti-mail-opened me-2"></i><strong>Así llegará el correo</strong>
+      <span class="ms-auto small opacity-75">Ejemplo con la llamada 51595</span>
+    </div>
+    <div class="vista-previa-sobre">
+      <div class="vista-previa-linea"><span class="vista-previa-rotulo">Para</span><span data-vista-previa-para></span></div>
+      <div class="vista-previa-linea" data-vista-previa-fila-cc><span class="vista-previa-rotulo">CC</span><span data-vista-previa-cc></span></div>
+      <div class="vista-previa-linea vista-previa-asunto"><span class="vista-previa-rotulo">Asunto</span><span data-vista-previa-asunto></span></div>
+    </div>
+    <div class="vista-previa-texto" data-vista-previa-cuerpo></div>
+  </div>
+{% endmacro %}
+
+{% macro estilos() %}<link rel="stylesheet" href="{{ url_for('expedientes_seguros.static', filename='correos.css') }}">{% endmacro %}
+{% macro script() %}<script src="{{ url_for('expedientes_seguros.static', filename='correos.js') }}"></script>{% endmacro %}

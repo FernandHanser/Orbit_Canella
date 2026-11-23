@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% from "_macros.html" import campo, interruptor, encabezado, avatar_persona %}
+{% block titulo %}{{ "Registrar usuario STOD" if usuario is none else usuario.nombre_completo }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Registrar usuario STOD" if usuario is none else usuario.nombre_completo, "Usuarios y permisos") %}
+    <a href="{{ url_for('admin.usuarios') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% macro selector_rol() %}
+  <div class="mb-3">
+    <label class="form-label">Rol en ORBIT Canella</label>
+    {% if puede_cambiar_rol %}
+      <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
+        {% for rol in ROLES_ASIGNABLES_WEB %}
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="rol" value="{{ rol.clave }}" class="form-selectgroup-input"{% if rol_actual == rol.clave %} checked{% endif %}>
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3"><span class="form-selectgroup-check"></span></div>
+              <div><div class="fw-bold">{{ rol.nombre }}</div><div class="text-secondary small">{{ rol.descripcion }}</div></div>
+            </div>
+          </label>
+        {% endfor %}
+      </div>
+      <small class="form-hint">Ningún rol da acceso a los módulos: se asignan abajo. El superadministrador solo se asigna por consola.</small>
+    {% elif usuario is none %}
+      <div>{{ ROLES[0].nombre }}</div>
+      <small class="form-hint">Solo el superadministrador puede registrar administradores.</small>
+    {% else %}
+      <div>{{ usuario.nombre_rol }}</div>
+      <small class="form-hint">
+        {% if usuario.es_superadmin %}Se administra por consola: <code>flask --app wsgi usuarios superadmin</code> / <code>quitar-superadmin</code>.
+        {% elif usuario.id == current_user.id %}No puedes cambiar tu propio rol.
+        {% else %}Solo el superadministrador nombra o quita administradores.{% endif %}
+      </small>
+    {% endif %}
+  </div>
+{% endmacro %}
+{% block contenido %}
+<div class="row row-cards">
+  <div class="col-lg-7">
+    {# Dar el rol de Administrador es escalar privilegios: se confirma. Nada más lo requiere. #}
+    <form class="card" method="post" novalidate data-cargando="Guardando…"
+          {% if puede_cambiar_rol and rol_actual != "admin" %}data-confirmar-si="input[name=rol][value=admin]:checked"
+          data-confirmar-titulo="¿Dar el rol de Administrador?"
+          data-confirmar="Podrá asignar módulos a cualquier persona (también a sí misma), habilitar o deshabilitar personas, configurar todos los módulos y ver ejecuciones y logs."
+          data-confirmar-boton="Sí, dar el rol"{% endif %}>
+      {{ form.hidden_tag() }}
+      <div class="card-header"><h3 class="card-title">{{ "Persona" if usuario is none else "Acceso" }}</h3></div>
+      <div class="card-body">
+        {% if usuario is none %}
+          {{ campo(form.usuario_stod, autocomplete="off", autofocus=True,
+                   ayuda="El usuario con el que la persona entra a STOD. Se valida que exista en STOD.") }}
+          <div class="row">
+            <div class="col-sm-6">{{ campo(form.nombres, autocomplete="off") }}</div>
+            <div class="col-sm-6">{{ campo(form.apellidos, autocomplete="off") }}</div>
+          </div>
+          <small class="form-hint d-block mt-n2 mb-3">STOD no guarda el nombre: el que registres aquí es el que se muestra en todo el sistema.</small>
+          {{ selector_rol() }}
+        {% else %}
+          {% if not usuario.tiene_nombre_registrado %}
+            <div class="alert alert-warning py-2"><div>Registra su nombre y apellido: STOD no los tiene y hoy se muestra «{{ usuario.nombre }}».</div></div>
+          {% endif %}
+          <div class="row">
+            <div class="col-sm-6">{{ campo(form.nombres, autocomplete="off") }}</div>
+            <div class="col-sm-6">{{ campo(form.apellidos, autocomplete="off") }}</div>
+          </div>
+          {% if puede_cambiar_estado %}
+            {{ interruptor(form.activo, "Deshabilitado, no puede entrar aunque esté activo en STOD, y sus sesiones abiertas se cierran.") }}
+          {% else %}
+            <p class="mb-3">
+              Estado: {% if usuario.activo %}<span class="badge bg-green-lt">Habilitado</span>{% else %}<span class="badge bg-secondary-lt">Deshabilitado</span>{% endif %}
+              <span class="text-secondary small ms-2">
+                {% if usuario.id == current_user.id %}No puedes cambiar tu propio estado.
+                {% elif usuario.es_superadmin %}El superadministrador se administra por consola.
+                {% else %}Solo el superadministrador puede deshabilitar administradores.{% endif %}
+              </span>
+            </p>
+          {% endif %}
+          {{ selector_rol() }}
+        {% endif %}
+
+        <div class="hr-text">Módulos asignados</div>
+        {% if modulos %}
+          <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column lista-modulos">
+            {% for m in modulos %}
+              <label class="form-selectgroup-item flex-fill">
+                <input type="checkbox" name="modulos" value="{{ m.id }}" class="form-selectgroup-input"{% if m.id in seleccionados %} checked{% endif %}>
+                <div class="form-selectgroup-label d-flex align-items-center p-3">
+                  <div class="me-3"><span class="form-selectgroup-check"></span></div>
+                  <span class="avatar avatar-sm bg-primary-lt me-3"><i class="ti ti-{{ m.icono }}"></i></span>
+                  <div>
+                    <div class="fw-bold">
+                      {{ m.nombre }}
+                      {% if not m.activo %}<span class="badge bg-secondary-lt ms-1">Deshabilitado</span>{% endif %}
+                      {% if m.id not in registro %}<span class="badge bg-red-lt ms-1">Sin código</span>{% endif %}
+                    </div>
+                    <div class="text-secondary small">{{ m.descripcion }}</div>
+                  </div>
+                </div>
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-secondary">No hay módulos en el catálogo.</p>
+        {% endif %}
+      </div>
+      <div class="card-footer text-end">
+        <a href="{{ url_for('admin.usuarios') }}" class="btn btn-link">Cancelar</a>
+        <button type="submit" class="btn btn-primary">{{ "Registrar" if usuario is none else "Guardar cambios" }}</button>
+      </div>
+    </form>
+  </div>
+
+  {% if usuario is not none %}
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-body text-center border-bottom">
+          {{ avatar_persona(usuario, "xl") }}
+          <h3 class="mt-3 mb-1">{{ usuario.nombre_completo }}</h3>
+          <div class="text-secondary">{{ usuario.nombre_rol }}</div>
+        </div>
+        <div class="card-header"><h3 class="card-title">Datos de STOD</h3></div>
+        <div class="card-body">
+          <div class="datagrid">
+            <div><div class="datagrid-title">Usuario STOD</div><div class="font-monospace">{{ usuario.usuario_stod }}</div></div>
+            <div><div class="datagrid-title">Correo</div><div>{{ usuario.email or "—" }}</div></div>
+            <div><div class="datagrid-title">Registrado en el hub</div><div>{{ usuario.creado_en|fecha }}</div></div>
+            <div><div class="datagrid-title">Último acceso</div><div>{{ usuario.ultimo_acceso|fecha if usuario.ultimo_acceso else "Aún no ha ingresado" }}</div></div>
+            <div><div class="datagrid-title">Última verificación en STOD</div><div>{{ usuario.stod_verificado_en|fecha }}</div></div>
+          </div>
+          <p class="text-secondary small mt-3 mb-2">
+            El correo y la contraseña se administran en STOD. Aquí solo se decide el acceso a ORBIT Canella.
+          </p>
+          <a href="{{ url_for('admin.logs', usuario=usuario.usuario_stod, dias=7) }}" class="btn btn-sm"><i class="ti ti-file-text me-1"></i>Ver sus eventos</a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

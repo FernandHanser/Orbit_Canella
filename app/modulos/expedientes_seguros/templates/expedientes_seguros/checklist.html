@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% block titulo %}Checklist {{ aseguradora.nombre }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('expedientes_seguros.static', filename='checklist.css') }}">{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Checklist " ~ aseguradora.nombre, "Expedientes de Seguros · Aseguradoras") %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.aseguradoras') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% if errores %}
+  <div class="alert alert-danger"><div><h4 class="alert-title">No se guardó</h4>
+    <ul class="mb-0">{% for e in errores %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
+{% endif %}
+
+{% macro fila(f) %}
+  <tr class="fila-documento{% if not f.activo %} inactivo{% endif %}{% if f.quitar %} por-quitar{% endif %}" data-clave="{{ f.clave }}">
+    <td class="text-nowrap">
+      <input type="hidden" name="orden" value="{{ f.clave }}">
+      <span class="numero text-secondary me-1"></span>
+      <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mover="-1" title="Subir"><i class="ti ti-arrow-up"></i></button>
+      <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mover="1" title="Bajar"><i class="ti ti-arrow-down"></i></button>
+    </td>
+    <td class="w-100">
+      <input class="form-control form-control-sm" name="nombre-{{ f.clave }}" value="{{ f.nombre }}" maxlength="200"
+             aria-label="Nombre del documento" placeholder="Nombre del documento">
+    </td>
+    <td class="text-center">
+      <label class="form-check form-switch m-0 d-inline-block" title="Obligatorio (apagado = si aplica)">
+        <input class="form-check-input" type="checkbox" name="obligatorio-{{ f.clave }}" value="1"{% if f.obligatorio %} checked{% endif %}>
+      </label>
+    </td>
+    <td class="text-center">
+      <label class="form-check form-switch m-0 d-inline-block" title="Activo (apagado = no aparece en el visor)">
+        <input class="form-check-input" type="checkbox" name="activo-{{ f.clave }}" value="1" data-activo{% if f.activo %} checked{% endif %}>
+      </label>
+    </td>
+    <td class="text-center">
+      <label class="form-check form-switch m-0 d-inline-block" title="Archivo aparte (apagado = unido en el PDF principal)">
+        <input class="form-check-input" type="checkbox" name="separado-{{ f.clave }}" value="1"{% if f.separado %} checked{% endif %}>
+      </label>
+    </td>
+    <td class="text-center">
+      <label class="btn btn-sm btn-icon btn-ghost-danger m-0" title="Quitar al guardar">
+        <input class="d-none" type="checkbox" name="quitar-{{ f.clave }}" value="1" data-quitar{% if f.quitar %} checked{% endif %}>
+        <i class="ti ti-trash"></i>
+      </label>
+    </td>
+  </tr>
+{% endmacro %}
+
+<form class="card" method="post" novalidate data-cargando="Guardando…" id="editor-checklist"
+      data-confirmar-si="input[data-quitar]:checked"
+      data-confirmar-titulo="¿Quitar documentos del checklist?"
+      data-confirmar="Los documentos marcados en rojo se quitarán del checklist de esta aseguradora. Los paquetes ya generados no cambian (guardan los nombres). Si solo quieres dejar de pedirlo por un tiempo, mejor desactívalo."
+      data-confirmar-boton="Sí, quitar">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-body text-secondary small border-bottom">
+    Documentos que Créditos pide para <strong>{{ aseguradora.nombre }}</strong>, en el orden en que aparecen en el visor.
+    <strong>Obligatorio</strong> apagado = «si aplica» (se muestra, pero no se exige). <strong>Activo</strong> apagado = deja
+    de aparecer en el visor sin borrarse. <strong>Archivo aparte</strong> encendido = este documento sale en su propio
+    PDF en vez de ir unido al expediente principal (así se usa hoy para la factura de MAPFRE o El Roble, pero aplica a
+    cualquier documento). «Factura original» se cumple al adjuntar la factura.
+  </div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Orden</th><th>Documento</th><th class="text-center">Obligatorio</th><th class="text-center">Activo</th>
+        <th class="text-center">Archivo aparte</th><th class="text-center">Quitar</th></tr></thead>
+      <tbody id="filas-checklist">
+        {% for f in filas %}{{ fila(f) }}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <template id="plantilla-fila">{{ fila({"clave": "__CLAVE__", "nombre": "", "obligatorio": True, "activo": True, "separado": False, "quitar": False}) }}</template>
+  <div class="card-footer d-flex gap-2">
+    <button type="button" class="btn" id="agregar-documento"><i class="ti ti-plus me-2"></i>Agregar documento</button>
+    <a class="btn btn-link ms-auto" href="{{ url_for('expedientes_seguros.aseguradoras') }}">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-2"></i>Guardar checklist</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('expedientes_seguros.static', filename='checklist.js') }}"></script>{% endblock %}

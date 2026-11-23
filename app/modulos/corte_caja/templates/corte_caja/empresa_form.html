@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, campo, interruptor %}
+{% set titulo = "Editar " ~ empresa.carpeta if empresa else "Nueva empresa" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado(titulo, "Corte de caja diario · Empresas") %}
+    <a class="btn" href="{{ url_for('corte_caja.empresas') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="row">
+  <div class="col-lg-7">
+    <form class="card" method="post" novalidate data-cargando="Guardando…">
+      {{ form.hidden_tag() }}
+      <div class="card-body">
+        {{ campo(form.carpeta, "Nombre exacto de la carpeta dentro de la carpeta compartida. Cambiarlo afecta solo a los cortes nuevos: los ya archivados no se mueven.", autocomplete="off", autofocus=not empresa) }}
+        {{ campo(form.palabras_clave, "Separadas por coma. Se buscan dentro del asunto sin importar mayúsculas ni tildes. Incluye las variantes con errores frecuentes (ej. vesa, besa).", autocomplete="off") }}
+        {{ campo(form.orden, "Si un asunto coincide con varias empresas, gana la de menor orden.") }}
+        {{ interruptor(form.activa, "Inactiva: sus palabras clave no se buscan y esos correos se rechazan por empresa no reconocida.") }}
+      </div>
+      <div class="card-footer text-end">
+        <a class="btn btn-link" href="{{ url_for('corte_caja.empresas') }}">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-2"></i>Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

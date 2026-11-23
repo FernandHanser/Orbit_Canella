@@ -1,0 +1,28 @@
+{# Avance del checklist: el mismo componente en el panel y en la vista grande (visor.js lo actualiza).
+   Un sobre de correo que se llena de verde de abajo hacia arriba con el % adentro: al llegar al 100 %
+   el paquete está listo para el correo. Nombres en una línea (se recortan con «…» y el completo va
+   en el tooltip): no saltan de renglón.
+   `clave` distingue las dos copias en la página (el recorte del SVG necesita un id único). #}
+{% macro avance(aseguradora, clave) %}
+  <div class="avance-checklist d-flex align-items-center gap-3">
+    <svg class="avance-sobre" viewBox="0 0 120 84" role="progressbar" aria-label="Avance del expediente"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-avance>
+      <defs>
+        <clipPath id="sobre-{{ clave }}"><rect x="4" y="4" width="112" height="76" rx="10"/></clipPath>
+      </defs>
+      <rect class="sobre-fondo" x="4" y="4" width="112" height="76" rx="10"/>
+      <g clip-path="url(#sobre-{{ clave }})">
+        <rect class="sobre-relleno" x="0" y="0" width="120" height="84" data-avance-relleno/>
+      </g>
+      <polyline class="sobre-solapa" points="8,10 60,46 112,10"/>
+      <rect class="sobre-borde" x="4" y="4" width="112" height="76" rx="10"/>
+      <text class="sobre-porcentaje" x="60" y="70" text-anchor="middle" data-avance-porcentaje>0 %</text>
+    </svg>
+    <div class="min-w-0 flex-fill">
+      <div class="subheader">Documentos obligatorios</div>
+      <div class="small text-secondary text-truncate" title="{{ aseguradora }}">{{ aseguradora }}</div>
+      <div class="small mt-1 text-secondary" data-avance-detalle></div>
+      <div class="small text-secondary" data-avance-opcionales></div>
+    </div>
+  </div>
+{% endmacro %}

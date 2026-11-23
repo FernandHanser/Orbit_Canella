@@ -1,0 +1,30 @@
+{# Pantallas sin sesión (acceso). #}
+{% extends "base_layout.html" %}
+{% from "_macros.html" import mensajes %}
+{% block clase_body %}d-flex flex-column fondo-acceso{% endblock %}
+{% block cuerpo %}
+{# Capa de fondo independiente: se anima (profundidad) sin redibujar la página. #}
+<div class="fondo-capa" id="fondoAcceso" aria-hidden="true">
+  <div class="fondo-imagen"
+       style="background-image: linear-gradient(rgba(244, 245, 247, .35), rgba(244, 245, 247, .35)), url('{{ estatico('img/bk_index.jpg') }}')"></div>
+</div>
+<div class="page page-center">
+  <div class="container container-tight py-4">
+    <div class="text-center mb-4">
+      <span class="emblema mb-2" id="emblemaCanella" role="img" aria-label="Canella">
+        <canvas class="emblema-esfera" aria-hidden="true"></canvas>
+        <img class="emblema-marca" src="{{ estatico('img/logo_canella_blanco.png') }}" alt="" aria-hidden="true">
+      </span>
+      {# Solo en el login el título dice "ORBIT Automate"; el nombre del producto (pestaña, menú, correos) sigue siendo NOMBRE_PRODUCTO. #}
+      {% set palabra_marca = NOMBRE_PRODUCTO.split(" ", 1)[0] %}
+      <h1 class="acceso-nombre mb-1"><span class="fuente-marca">{{ palabra_marca }}</span> <span class="resto-nombre">Automate</span></h1>
+      <div class="text-secondary">{{ SUBTITULO_PRODUCTO }}</div>
+    </div>
+    {{ mensajes() }}
+    {% block contenido %}{% endblock %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ estatico('js/emblema-canella.js') }}"></script>
+<script src="{{ estatico('js/parallax-acceso.js') }}"></script>{% endblock %}

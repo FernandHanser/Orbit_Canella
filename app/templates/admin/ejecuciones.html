@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, estado_ejecucion, paginacion as pie_paginacion %}
+{% block titulo %}Ejecuciones{% endblock %}
+{% block encabezado %}{{ encabezado("Ejecuciones", "Administración") }}{% endblock %}
+{% block contenido %}
+<form class="card mb-3" method="get">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-4">
+        <label class="form-label" for="f-modulo">Módulo</label>
+        <select class="form-select" name="modulo" id="f-modulo">
+          <option value="">Todos</option>
+          {% for m in modulos %}<option value="{{ m.id }}"{% if filtro.modulo == m.id %} selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label" for="f-estado">Estado</label>
+        <select class="form-select" name="estado" id="f-estado">
+          <option value="">Con actividad</option>
+          <option value="todas"{% if filtro.estado == "todas" %} selected{% endif %}>Todas (incluye sin cambios)</option>
+          {% for e in estados %}<option value="{{ e }}"{% if filtro.estado == e %} selected{% endif %}>{{ e.replace("_", " ")|capitalize }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Filtrar</button>
+        <a href="{{ url_for('admin.ejecuciones') }}" class="btn btn-link">Limpiar</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr><th>Inicio</th><th>Módulo</th><th>Tarea</th><th>Iniciada por</th><th>Estado</th><th>Duración</th><th>Identificador</th></tr>
+      </thead>
+      <tbody>
+        {% for e in ejecuciones %}
+          <tr>
+            <td class="celda-ts">{{ e.inicio|fecha("%d/%m/%Y %H:%M:%S") }}</td>
+            <td class="font-monospace small">{{ e.modulo_id }}</td>
+            <td>{{ e.tarea or "—" }}</td>
+            <td class="small">{{ e.iniciado_por }}</td>
+            <td>{{ estado_ejecucion(e.estado) }}</td>
+            <td class="small">{{ "%.2f s"|format(e.duracion_segundos) if e.duracion_segundos is not none else "—" }}</td>
+            <td><a class="font-monospace small" href="{{ url_for('admin.ejecucion_detalle', ejecucion_id=e.id) }}">{{ e.id[:12] }}…</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">No hay ejecuciones con esos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(paginacion, "ejecuciones") }}
+</div>
+{% endblock %}

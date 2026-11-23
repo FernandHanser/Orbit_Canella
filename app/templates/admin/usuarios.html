@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, avatar_persona, paginacion as pie_paginacion %}
+{% block titulo %}Usuarios y permisos{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Usuarios y permisos", "Administración") %}
+    <a href="{{ url_for('admin.usuario_nuevo') }}" class="btn btn-primary"><i class="ti ti-user-plus me-2"></i>Registrar usuario STOD</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="alert alert-info">
+  <div>
+    Cualquier persona activa en STOD puede iniciar sesión; queda registrada aquí en su primer ingreso, como
+    <strong>{{ ROLES[0].nombre }}</strong> y sin módulos. Usa <strong>Registrar usuario STOD</strong> para asignarle rol y módulos
+    antes de que entre por primera vez.
+  </div>
+</div>
+<div class="row row-cards mb-3">
+  {% for rol in ROLES %}
+    <div class="col-md-4">
+      <div class="card card-sm h-100">
+        <div class="card-body">
+          <span class="badge bg-{{ rol.color }}-lt mb-2">{{ rol.nombre }}</span>
+          <div class="text-secondary small">{{ rol.descripcion }}</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  <div class="col-12 text-secondary small">Ningún rol da acceso a los módulos por sí solo: cada módulo se asigna por persona. Glosario completo en <code>docs/GLOSARIO.md</code>.</div>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Módulos asignados</th>
+          <th>Último acceso</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {{ avatar_persona(u) }}
+                <div>
+                <div class="fw-bold">
+                  {{ u.nombre_completo }}
+                  {% if not u.tiene_nombre_registrado %}<span class="badge bg-yellow-lt ms-1" title="STOD no guarda el nombre: regístralo en Editar">Sin nombre registrado</span>{% endif %}
+                </div>
+                <div class="text-secondary small">{{ u.usuario_stod }}{% if u.email %} · {{ u.email }}{% endif %}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-{{ u.info_rol.color }}-lt">{{ u.info_rol.nombre }}</span>
+            </td>
+            <td>
+              {% if not u.activo %}<span class="badge bg-secondary-lt">Deshabilitado</span>
+              {% elif u.pendiente_primer_ingreso %}<span class="badge bg-yellow-lt" title="Prerregistrado; aún no ha iniciado sesión">Sin ingresar</span>
+              {% else %}<span class="badge bg-green-lt">Habilitado</span>{% endif %}
+            </td>
+            <td>
+              {% for p in u.permisos|sort(attribute="modulo_id") %}
+                <span class="badge bg-blue-lt me-1 mb-1">{{ p.modulo.nombre if p.modulo else p.modulo_id }}</span>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endfor %}
+            </td>
+            <td class="celda-ts text-secondary">{{ u.ultimo_acceso|fecha }}</td>
+            <td>
+              {% if current_user.es_superadmin or not u.es_superadmin %}
+                <a href="{{ url_for('admin.usuario_editar', usuario_id=u.id) }}" class="btn btn-sm">Editar</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-secondary py-4">No hay usuarios registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(paginacion, "usuarios") }}
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, paginacion as pie_paginacion %}
+{% block titulo %}Historial de paquetes{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Historial de paquetes", "Expedientes de Seguros") %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.inicio') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Fecha</th><th>Llamada</th><th>Aseguradora</th><th>Factura</th><th>Páginas</th><th>Armado</th><th></th></tr></thead>
+      <tbody>
+        {% for p in paquetes %}
+          <tr>
+            <td class="celda-ts">{{ p.creado_en|fecha("%d/%m/%Y %H:%M") }}</td>
+            <td class="fw-bold">{{ p.call_id }}</td>
+            <td class="small">{{ p.aseguradora_nombre }}</td>
+            <td class="small font-monospace">{{ p.factura_serie }} {{ p.factura_numero }}</td>
+            <td>{{ p.cantidad_paginas }} de {{ p.total_paginas }}</td>
+            <td class="small text-secondary">{{ p.segundos_armado ~ " s" if p.segundos_armado else "—" }}</td>
+            <td><a href="{{ url_for('expedientes_seguros.paquete', paquete_id=p.id) }}">Ver</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">Todavía no se ha generado ningún paquete.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(pagina, "paquetes") }}
+</div>
+{% endblock %}

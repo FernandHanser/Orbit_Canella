@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, paginacion as pie_paginacion %}
+{% block titulo %}Logs{% endblock %}
+{% block encabezado %}{{ encabezado("Logs", "Administración") }}{% endblock %}
+{% block contenido %}
+<form class="card mb-3" method="get" data-cargando="Buscando…">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label" for="f-modulo">Módulo</label>
+        <select class="form-select" name="modulo" id="f-modulo">
+          <option value="">Todos</option>
+          {% for m in modulos_ids %}<option value="{{ m }}"{% if filtro.modulo == m %} selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label" for="f-nivel">Nivel mínimo</label>
+        <select class="form-select" name="nivel" id="f-nivel">
+          <option value="">Todos</option>
+          {% for n in niveles %}<option value="{{ n }}"{% if filtro.nivel_minimo == n %} selected{% endif %}>{{ n }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label" for="f-ejecucion">Ejecución</label>
+        <input class="form-control font-monospace" name="ejecucion_id" id="f-ejecucion" value="{{ filtro.ejecucion_id or '' }}" placeholder="identificador">
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label" for="f-usuario">Usuario</label>
+        <input class="form-control" name="usuario" id="f-usuario" value="{{ filtro.usuario or '' }}" placeholder="correo">
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label" for="f-texto">Texto</label>
+        <input class="form-control" name="texto" id="f-texto" value="{{ filtro.texto or '' }}" placeholder="mensaje o evento">
+      </div>
+      <div class="col-sm-3 col-lg-1">
+        <label class="form-label" for="f-dias">Días</label>
+        <input class="form-control" type="number" min="1" max="{{ config.LOG_RETENCION_DIAS }}" name="dias" id="f-dias" value="{{ filtro.dias }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Filtrar</button>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-link">Limpiar</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Eventos</h3>
+    <div class="card-actions"><span class="text-secondary small">Del más reciente al más antiguo{% if paginacion.total >= tope %} · se muestran los {{ tope }} más recientes; afina los filtros para ver anteriores{% endif %}</span></div>
+  </div>
+  {% include "admin/_tabla_logs.html" %}
+  {{ pie_paginacion(paginacion, "eventos") }}
+  <div class="card-footer text-secondary small">
+    Fuente: archivos <span class="font-monospace">automate-AAAA-MM-DD.jsonl</span> en el directorio de logs. Retención configurada: {{ config.LOG_RETENCION_DIAS }} días.
+  </div>
+</div>
+{% endblock %}

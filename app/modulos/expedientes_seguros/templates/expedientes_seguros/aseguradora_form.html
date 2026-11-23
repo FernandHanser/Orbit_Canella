@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, campo, interruptor %}
+{% from "expedientes_seguros/_correo.html" import barra_datos, vista_previa, estilos, script %}
+{% set titulo = "Editar " ~ aseguradora.nombre if aseguradora else "Nueva aseguradora" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block head %}{{ estilos() }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado(titulo, "Expedientes de Seguros · Aseguradoras") %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.aseguradoras') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<form method="post" novalidate data-cargando="Guardando…">
+  {{ form.hidden_tag() }}
+
+  {# ------------------------------------------------------------ datos de la aseguradora #}
+  <div class="card mb-3">
+    <div class="card-header">
+      <h3 class="card-title"><i class="ti ti-building-bank me-2"></i>Datos de la aseguradora</h3>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">{{ campo(form.nombre, autocomplete="off") }}</div>
+        <div class="col-md-6">{{ campo(form.codigos, "Código del socio de negocios en SAP (OSCL.customer). Varios separados por coma: ej. MAPFRE tiene dos.", autocomplete="off") }}</div>
+      </div>
+      {{ interruptor(form.activa) }}
+      {% if aseguradora %}
+        <a class="btn" href="{{ url_for('expedientes_seguros.checklist', aseguradora_id=aseguradora.id) }}">
+          <i class="ti ti-list-check me-2"></i>Editar checklist ({{ aseguradora.documentos|length }} documentos)
+        </a>
+        <div class="form-hint mt-2 mb-0">
+          Si la factura (u otro documento) debe ir en archivo aparte —como MAPFRE o El Roble—, se marca por
+          documento en el checklist, no aquí.
+        </div>
+      {% else %}
+        <p class="text-secondary small mb-0">El checklist de documentos, y cuáles van en archivo aparte, se arma después de guardar la aseguradora.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------ correo propio (opcional) #}
+  <div class="card correo-propio">
+    <div class="card-status-start bg-azure"></div>
+    <div class="card-header">
+      <div>
+        <h3 class="card-title"><i class="ti ti-mail-cog me-2 text-azure"></i>Correo propio <span class="badge bg-azure-lt ms-1">Opcional</span></h3>
+        <div class="card-subtitle mt-1">
+          Solo lo que cambia para esta aseguradora. Lo que dejes vacío se toma del
+          <a href="{{ url_for('expedientes_seguros.parametros') }}">correo por defecto</a>.
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-lg-6">{{ campo(form.para, "Escribe cada correo y pulsa Enter. Vacío = los del correo por defecto.", data_correos=True) }}</div>
+        <div class="col-lg-6">{{ campo(form.cc, "Con copia. Opcional.", data_correos=True) }}</div>
+      </div>
+      {{ barra_datos() }}
+      {{ campo(form.asunto) }}
+      {{ campo(form.cuerpo, rows=7) }}
+      {{ vista_previa(defectos=parametros) }}
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mt-3">
+    <a class="btn btn-link" href="{{ url_for('expedientes_seguros.aseguradoras') }}">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-2"></i>Guardar</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}{{ script() }}{% endblock %}

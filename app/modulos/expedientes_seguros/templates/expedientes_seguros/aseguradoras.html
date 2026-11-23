@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% from "expedientes_seguros/_correo.html" import vista_previa, estilos, script %}
+{% block titulo %}Aseguradoras y correo{% endblock %}
+{% block head %}{{ estilos() }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Aseguradoras y correo", "Expedientes de Seguros") %}
+    <a class="btn" href="{{ url_for('expedientes_seguros.inicio') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+    {% if puede_editar %}<a class="btn btn-primary" href="{{ url_for('expedientes_seguros.aseguradora_nueva') }}"><i class="ti ti-plus me-2"></i>Nueva aseguradora</a>{% endif %}
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% set modo = modo_envio() %}
+<div class="card mb-3">
+  <div class="card-status-start {{ 'bg-yellow' if modo.prueba else 'bg-green' }}"></div>
+  <div class="card-header">
+    <div>
+      <h3 class="card-title"><i class="ti ti-send me-2"></i>Envío de correos
+        {% if modo.prueba %}<span class="badge bg-yellow text-yellow-fg ms-2">PRUEBA</span>{% else %}<span class="badge bg-green text-green-fg ms-2">PRODUCCIÓN</span>{% endif %}
+      </h3>
+      <div class="card-subtitle mt-1">En prueba, todo correo va solo al destino de prueba (con «[PRUEBA]» en el asunto). En producción, a Cobros y los destinatarios reales.</div>
+    </div>
+  </div>
+  {% if puede_editar %}
+    <form class="card-body" method="post" action="{{ url_for('expedientes_seguros.modo_envio') }}" data-cargando="Guardando…"
+          data-confirmar-titulo="¿Cambiar el modo de envío?"
+          data-confirmar="En PRODUCCIÓN los correos llegan a Cobros y a los destinatarios reales. En PRUEBA llegan solo al destino de prueba."
+          data-confirmar-boton="Sí, cambiar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-auto">
+          <div class="form-label">Modo</div>
+          <div class="form-selectgroup">
+            <label class="form-selectgroup-item">
+              <input type="radio" name="modo" value="prueba" class="form-selectgroup-input" {{ "checked" if modo.prueba }}>
+              <span class="form-selectgroup-label"><i class="ti ti-flask me-1 text-yellow"></i>Prueba</span>
+            </label>
+            <label class="form-selectgroup-item">
+              <input type="radio" name="modo" value="produccion" class="form-selectgroup-input" {{ "checked" if not modo.prueba }}>
+              <span class="form-selectgroup-label"><i class="ti ti-circle-check me-1 text-green"></i>Producción</span>
+            </label>
+          </div>
+        </div>
+        <div class="col-md">
+          <label class="form-label" for="destino_prueba">Destino de prueba</label>
+          <input class="form-control" id="destino_prueba" name="destino_prueba" value="{{ modo.destino_prueba }}" maxlength="300">
+        </div>
+        <div class="col-md-auto">
+          <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-2"></i>Guardar</button>
+        </div>
+      </div>
+    </form>
+  {% else %}
+    <div class="card-body small">
+      {% if modo.prueba %}Los correos van solo a <strong>{{ modo.destino_prueba }}</strong>.{% else %}Los correos van a los destinatarios reales.{% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title"><i class="ti ti-mail me-2"></i>Correo por defecto</h3>
+      <div class="card-subtitle mt-1">Lo usan todas las aseguradoras en los campos que dejen vacíos. Cambiar a alguien de Cobros aquí lo cambia para todas.</div>
+    </div>
+    {% if puede_editar %}<div class="card-actions"><a class="btn btn-sm" href="{{ url_for('expedientes_seguros.parametros') }}"><i class="ti ti-pencil me-1"></i>Editar</a></div>{% endif %}
+  </div>
+  <div class="card-body">
+    {# El mismo componente de los formularios, alimentado con los valores guardados (campos ocultos). #}
+    <textarea id="defecto-para" hidden>{{ parametros.para }}</textarea>
+    <textarea id="defecto-cc" hidden>{{ parametros.cc }}</textarea>
+    <textarea id="defecto-asunto" hidden>{{ parametros.asunto }}</textarea>
+    <textarea id="defecto-cuerpo" hidden>{{ parametros.cuerpo }}</textarea>
+    {{ vista_previa("defecto-asunto", "defecto-cuerpo", "defecto-para", "defecto-cc") }}
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Aseguradora</th><th>Códigos SAP</th><th>Checklist</th><th>Factura</th><th>Correo</th><th>Estado</th>{% if puede_editar %}<th class="w-1"></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for a in aseguradoras %}
+          <tr>
+            <td class="fw-bold">{{ a.nombre }}</td>
+            <td class="font-monospace small">{{ a.lista_codigos }}</td>
+            <td class="small">
+              {% set activos = a.documentos|selectattr("activo")|list %}
+              {% if puede_editar %}<a href="{{ url_for('expedientes_seguros.checklist', aseguradora_id=a.id) }}">{{ activos|length }} documentos</a>
+              {% else %}{{ activos|length }} documentos{% endif %}
+              {% if a.documentos|length > activos|length %}<span class="text-secondary">· {{ a.documentos|length - activos|length }} inactivos</span>{% endif %}
+            </td>
+            <td>{% if a.factura_separada %}<span class="badge bg-azure-lt">Separada</span>{% else %}<span class="badge bg-secondary-lt">Unida</span>{% endif %}</td>
+            <td class="small">{% if a.para or a.cc or a.asunto or a.cuerpo %}Propio{% else %}<span class="text-secondary">Por defecto</span>{% endif %}</td>
+            <td>{% if a.activa %}<span class="badge bg-green-lt">Activa</span>{% else %}<span class="badge bg-secondary-lt">Inactiva</span>{% endif %}</td>
+            {% if puede_editar %}
+              <td class="text-nowrap">
+                <a class="btn btn-sm" href="{{ url_for('expedientes_seguros.aseguradora_editar', aseguradora_id=a.id) }}"><i class="ti ti-pencil me-1"></i>Editar</a>
+                <form method="post" action="{{ url_for('expedientes_seguros.aseguradora_eliminar', aseguradora_id=a.id) }}" class="d-inline"
+                      data-cargando="Eliminando…" data-confirmar-titulo="¿Eliminar {{ a.nombre }}?"
+                      data-confirmar="Sus llamadas usarán el correo por defecto. Si ya tiene paquetes registrados no se elimina: se te pedirá desactivarla."
+                      data-confirmar-boton="Sí, eliminar">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-ghost-danger" title="Eliminar"><i class="ti ti-trash"></i></button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">No hay aseguradoras configuradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}{{ script() }}{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base_publica.html" %}
+{% from "_macros.html" import campo %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+{% if aviso %}
+  <div class="alert alert-warning" role="status">
+    <div class="d-flex"><i class="ti ti-clock-exclamation alert-icon"></i><div>{{ aviso }}</div></div>
+  </div>
+{% endif %}
+<div class="card card-md">
+  <div class="card-body">
+    <h2 class="h2 text-center mb-4">Iniciar sesión</h2>
+    <form method="post" action="{{ url_for('auth.acceso', siguiente=siguiente) if siguiente else url_for('auth.acceso') }}" autocomplete="on" novalidate data-cargando="Validando con STOD…">
+      {{ form.hidden_tag() }}
+      {{ campo(form.usuario, autocomplete="username", autofocus=True) }}
+      {{ campo(form.contrasena, autocomplete="current-password") }}
+      <div class="form-footer">
+        <button type="submit" class="btn btn-primary w-100"><i class="ti ti-login-2 me-2"></i>Entrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="text-center text-secondary mt-3 small">
+  Usa el mismo usuario y contraseña de STOD.<br>
+  ¿No tienes acceso o olvidaste tu contraseña? Solicítalo a la mesa de ayuda Canella.
+</div>
+{% endblock %}

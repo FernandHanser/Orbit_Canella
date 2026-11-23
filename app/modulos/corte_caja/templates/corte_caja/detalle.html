@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado %}
+{% block titulo %}Correo de corte de caja{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Correo de corte de caja", "Corte de caja diario") %}
+    <a class="btn" href="{{ url_for('corte_caja.inicio', estado=correo.estado) }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% set nombres = {"procesado": ("green", "Procesado"), "rechazado": ("red", "Rechazado"), "ignorado": ("secondary", "Ignorado"), "error": ("orange", "Con error")} %}
+{% set par = nombres.get(correo.estado, ("secondary", correo.estado)) %}
+<div class="card">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Estado</dt>
+      <dd class="col-sm-9">
+        <span class="badge bg-{{ par[0] }}-lt">{{ par[1] }}</span>
+        {% if correo.simulado %}<span class="badge bg-azure-lt ms-1">Simulado</span>{% endif %}
+      </dd>
+      <dt class="col-sm-3">Asunto</dt><dd class="col-sm-9">{{ correo.asunto or "(sin asunto)" }}</dd>
+      <dt class="col-sm-3">Remitente</dt><dd class="col-sm-9">{{ correo.remitente or "—" }}</dd>
+      <dt class="col-sm-3">Recibido</dt><dd class="col-sm-9">{{ correo.recibido|fecha("%d/%m/%Y %H:%M:%S") }}</dd>
+      <dt class="col-sm-3">Empresa</dt><dd class="col-sm-9">{{ correo.empresa or "—" }}</dd>
+      <dt class="col-sm-3">Fecha del corte</dt><dd class="col-sm-9">{{ correo.fecha_corte.strftime("%d/%m/%Y") if correo.fecha_corte else "—" }}</dd>
+      <dt class="col-sm-3">Procesado</dt><dd class="col-sm-9">{{ correo.creado_en|fecha("%d/%m/%Y %H:%M:%S") }}</dd>
+      <dt class="col-sm-3">Ejecución</dt>
+      <dd class="col-sm-9 font-monospace small">
+        {% if ver_ejecucion %}
+          <a href="{{ url_for('admin.ejecucion_detalle', ejecucion_id=correo.ejecucion_id) }}">{{ correo.ejecucion_id }}</a>
+        {% else %}{{ correo.ejecucion_id }}{% endif %}
+      </dd>
+      <dt class="col-sm-3">Identificador del mensaje</dt><dd class="col-sm-9 font-monospace small text-break">{{ correo.message_id }}</dd>
+      {% if correo.motivo %}
+        <dt class="col-sm-3">Motivo</dt><dd class="col-sm-9" style="white-space: pre-line">{{ correo.motivo }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+</div>
+
+{% if correo.archivos %}
+<div class="card mt-3">
+  <div class="card-header"><h3 class="card-title"><i class="ti ti-paperclip me-2"></i>Archivos</h3></div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Adjunto</th><th>Guardado como</th><th>Carpeta</th><th>Tamaño</th><th></th></tr></thead>
+      <tbody>
+        {% for a in correo.archivos %}
+          <tr>
+            <td>{{ a.nombre_original }}</td>
+            <td>{{ a.nombre_final }}</td>
+            <td class="small font-monospace">{{ a.carpeta }}</td>
+            <td class="small">{{ "{:,.0f}".format(a.tamano / 1024) }} KB</td>
+            <td>{% if a.duplicado %}<span class="badge bg-secondary-lt" title="Ya existía con el mismo contenido; no se escribió de nuevo">Ya existía</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

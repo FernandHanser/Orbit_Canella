@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, paginacion as pie_paginacion %}
+{% block titulo %}Corte de caja diario{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Corte de caja diario", "Automatizaciones") %}
+    <a class="btn" href="{{ url_for('corte_caja.empresas') }}"><i class="ti ti-building-store me-2"></i>Empresas</a>
+    {# Spinner siempre (la revisión puede tardar); confirmación solo en modo real, porque responde
+       a las agencias y mueve correos (ver docs/INTERFAZ.md, "Spinners y confirmaciones"). #}
+    <form method="post" action="{{ url_for('corte_caja.procesar_ahora') }}" class="d-inline"
+          data-cargando="Revisando buzón…"
+          {% if modo == "real" %}data-confirmar-titulo="¿Revisar el buzón ahora?"
+          data-confirmar="Se procesarán los correos pendientes: se guardarán los archivos válidos, se enviarán los correos de rechazo a las agencias y los correos se moverán de la bandeja de entrada. Puede tardar unos minutos."
+          data-confirmar-boton="Sí, revisar"{% endif %}>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary"><i class="ti ti-refresh me-2"></i>Revisar buzón ahora</button>
+    </form>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+{% if modo == "simulacion" %}
+  <div class="alert alert-info">
+    <div class="d-flex">
+      <i class="ti ti-test-pipe alert-icon"></i>
+      <div>
+        <h4 class="alert-title">Modo simulación</h4>
+        <div class="text-secondary">Se registra lo que se haría con cada correo, pero no se responde, no se guardan archivos
+          y los correos se quedan en la bandeja de entrada. Las filas llevan la etiqueta «Simulado».</div>
+      </div>
+    </div>
+  </div>
+{% elif modo != "real" %}
+  <div class="alert alert-warning">
+    <div class="d-flex">
+      <i class="ti ti-alert-triangle alert-icon"></i>
+      <div>
+        <h4 class="alert-title">Módulo sin configurar</h4>
+        <div class="text-secondary">Falta <code>CORTE_CAJA_MODO</code> y las demás variables <code>CORTE_CAJA_*</code> en el <code>.env</code> del servidor.</div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      {% for clave, titulo, icono, color in pestanas %}
+        {% set cantidad = conteos.get(clave, 0) %}
+        <li class="nav-item">
+          <a class="nav-link pestana-estado{% if estado == clave %} active{% endif %}" style="--color-pestana: var(--tblr-{{ color }})"
+             href="{{ url_for('corte_caja.inicio', estado=clave, empresa=filtro.empresa or None, texto=filtro.texto or None,
+                              desde=filtro.desde.isoformat() if filtro.desde else None, hasta=filtro.hasta.isoformat() if filtro.hasta else None) }}">
+            <i class="ti ti-{{ icono }} me-2 text-{{ color }}"></i>{{ titulo }}
+            {# El contador toma el color solo si hay algo: un 0 no debe llamar la atención. #}
+            <span class="badge bg-{{ color if cantidad else 'secondary' }}-lt ms-2">{{ cantidad }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <form class="card-body border-bottom" method="get">
+    <input type="hidden" name="estado" value="{{ estado }}">
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-3">
+        <label class="form-label" for="f-empresa">Empresa</label>
+        <select class="form-select" name="empresa" id="f-empresa">
+          <option value="">Todas</option>
+          {% for e in empresas %}<option value="{{ e.carpeta }}"{% if filtro.empresa == e.carpeta %} selected{% endif %}>{{ e.carpeta }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label" for="f-texto">Asunto o remitente</label>
+        <input class="form-control" type="search" name="texto" id="f-texto" value="{{ filtro.texto }}">
+      </div>
+      <div class="col-sm-2">
+        <label class="form-label" for="f-desde">Recibido desde</label>
+        <input class="form-control" type="date" name="desde" id="f-desde" value="{{ filtro.desde.isoformat() if filtro.desde else '' }}">
+      </div>
+      <div class="col-sm-2">
+        <label class="form-label" for="f-hasta">Hasta</label>
+        <input class="form-control" type="date" name="hasta" id="f-hasta" value="{{ filtro.hasta.isoformat() if filtro.hasta else '' }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Filtrar</button>
+        <a href="{{ url_for('corte_caja.inicio', estado=estado) }}" class="btn btn-link">Limpiar</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Recibido</th><th>Asunto</th><th>Remitente</th><th>Empresa</th><th>Fecha del corte</th>
+          <th>{% if estado == "procesado" %}Archivos{% else %}Motivo{% endif %}</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in correos %}
+          <tr>
+            <td class="celda-ts">{{ c.recibido|fecha("%d/%m/%Y %H:%M") }}</td>
+            <td>
+              {{ c.asunto or "(sin asunto)" }}
+              {% if c.simulado %}<span class="badge bg-azure-lt ms-1">Simulado</span>{% endif %}
+            </td>
+            <td class="small">{{ c.remitente }}</td>
+            <td>{{ c.empresa or "—" }}</td>
+            <td>{{ c.fecha_corte.strftime("%d/%m/%Y") if c.fecha_corte else "—" }}</td>
+            <td class="small">
+              {% if estado == "procesado" %}
+                {{ c.archivos|length }}
+              {% else %}
+                {{ (c.motivo or "")|truncate(120) }}
+              {% endif %}
+            </td>
+            <td><a href="{{ url_for('corte_caja.detalle', correo_id=c.id) }}">Detalle</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">No hay correos con esos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(pagina, "correos") }}
+</div>
+
+{% endblock %}

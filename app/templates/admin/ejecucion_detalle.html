@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, estado_ejecucion %}
+{% block titulo %}Ejecución {{ ejecucion.id[:8] }}{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Ejecución " ~ ejecucion.id[:12] ~ "…", "Ejecuciones") %}
+    <a href="{{ url_for('admin.ejecuciones') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="datagrid">
+      <div><div class="datagrid-title">Identificador</div><div class="font-monospace small">{{ ejecucion.id }}</div></div>
+      <div><div class="datagrid-title">Módulo</div><div class="font-monospace">{{ ejecucion.modulo_id }}</div></div>
+      <div><div class="datagrid-title">Tarea</div><div>{{ ejecucion.tarea or "—" }}</div></div>
+      <div><div class="datagrid-title">Iniciada por</div><div>{{ ejecucion.iniciado_por }}</div></div>
+      <div><div class="datagrid-title">Estado</div><div>{{ estado_ejecucion(ejecucion.estado) }}</div></div>
+      <div><div class="datagrid-title">Inicio</div><div>{{ ejecucion.inicio|fecha("%d/%m/%Y %H:%M:%S") }}</div></div>
+      <div><div class="datagrid-title">Fin</div><div>{{ ejecucion.fin|fecha("%d/%m/%Y %H:%M:%S") }}</div></div>
+      <div><div class="datagrid-title">Duración</div><div>{{ "%.2f s"|format(ejecucion.duracion_segundos) if ejecucion.duracion_segundos is not none else "—" }}</div></div>
+    </div>
+    {% if ejecucion.resultado %}
+      <div class="mt-3"><div class="datagrid-title">Resultado</div><div class="log-traza">{{ ejecucion.resultado }}</div></div>
+    {% endif %}
+    {% if ejecucion.error %}
+      <div class="alert alert-danger mt-3 mb-0"><i class="ti ti-alert-circle alert-icon"></i>{{ ejecucion.error }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Eventos de esta ejecución</h3>
+    <div class="card-actions"><span class="text-secondary small">{{ eventos|length }} eventos</span></div>
+  </div>
+  {% include "admin/_tabla_logs.html" %}
+</div>
+{% endblock %}
