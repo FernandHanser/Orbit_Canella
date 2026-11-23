@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="{{ estatico('vendor/tabler-1.5.1/css/tabler.min.css') }}">
   <link rel="stylesheet" href="{{ estatico('vendor/tabler-icons-3.48.0/tabler-icons.min.css') }}">
   <link rel="stylesheet" href="{{ estatico('css/automate.css') }}">
+  {# head_hub es de base.html (pantallas con menú); head queda libre para cada pantalla o módulo. #}
+  {% block head_hub %}{% endblock %}
   {% block head %}{% endblock %}
 </head>
 <body class="{% block clase_body %}{% endblock %}"{% block atributos_body %}{% endblock %}>

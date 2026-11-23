@@ -9,7 +9,7 @@ servidos desde `app/static/vendor/` (sin CDN). Todo el texto visible está en es
 
 | Plantilla | Uso |
 |---|---|
-| `base_layout.html` | Esqueleto HTML: `<head>`, CSS/JS de Tabler, favicon. Bloques `titulo`, `head`, `clase_body`, `cuerpo`, `scripts` |
+| `base_layout.html` | Esqueleto HTML: `<head>`, CSS/JS de Tabler, favicon. Bloques `titulo`, `head_hub` (solo lo usa `base.html`), `head`, `clase_body`, `cuerpo`, `scripts` |
 | `base.html` | Pantallas con sesión: menú lateral, encabezado, mensajes y pie. **La que extienden los módulos.** Bloques `titulo`, `encabezado`, `contenido` (+ `head`, `scripts`) |
 | `base_publica.html` | Pantallas sin sesión (login y errores sin sesión): logo animado, título y fondo |
 | `_macros.html` | Componentes reutilizables (abajo) |
@@ -17,6 +17,23 @@ servidos desde `app/static/vendor/` (sin CDN). Todo el texto visible está en es
 Variables disponibles en todas las plantillas: `NOMBRE_PRODUCTO`, `SUBTITULO_PRODUCTO`
 (definidos en `app/__init__.py`), `modulos_menu` (módulos del usuario), `current_user`,
 `config` y `csrf_token()`.
+
+---
+
+## Menú lateral que se oculta
+
+En pantallas grandes, «Ocultar menú» (al pie del menú, sobre «Cerrar sesión») o **Ctrl + B**
+desliza el menú fuera de la vista y el contenido ocupa todo el ancho. Queda un botón fijo arriba a
+la izquierda para mostrarlo de nuevo. En celular no aplica: Tabler ya pliega el menú con su botón.
+
+- La preferencia se guarda en el navegador (`localStorage`, clave `orbit.menu`), no en el servidor:
+  es una comodidad de pantalla. Se sincroniza entre pestañas abiertas.
+- `static/js/menu.js` se carga en `<head>` sin `defer` para poner la clase `menu-oculto` en
+  `<html>` antes de pintar; si no, el menú aparecería y desaparecería en cada navegación.
+- Va en el bloque `head_hub`, no en `head`: varias pantallas de módulos reemplazan `head` sin
+  `super()`, y el menú no debe depender de que lo recuerden. Un módulo **no** usa `head_hub`.
+- Oculto, el menú queda con `visibility: hidden`: el tabulador no recorre enlaces invisibles.
+- Prueba: `tests/test_interfaz.py::test_menu_se_puede_ocultar_en_todas_las_pantallas_con_menu`.
 
 ---
 

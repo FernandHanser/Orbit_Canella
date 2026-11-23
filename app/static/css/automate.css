@@ -11,6 +11,25 @@
 }
 .menu-usuario { border-top: 1px solid rgba(255, 255, 255, .08); }
 
+/* Menú que se oculta (static/js/menu.js). Solo en pantallas grandes: en celular Tabler ya lo pliega.
+   Se desliza fuera de la vista y el contenido ocupa el ancho; «visibility» lo saca del orden del
+   tabulador para que el teclado no recorra enlaces invisibles. */
+.menu-boton-mostrar { display: none; }
+@media (min-width: 992px) {
+  .navbar-vertical.navbar-expand-lg { transition: transform .25s ease, visibility .25s; }
+  .navbar-vertical.navbar-expand-lg ~ .page-wrapper { transition: margin-inline-start .25s ease; }
+  .menu-oculto .navbar-vertical.navbar-expand-lg { transform: translateX(-100%); visibility: hidden; }
+  .menu-oculto .navbar-vertical.navbar-expand-lg ~ .page-wrapper { margin-inline-start: 0; padding-inline-start: 3.25rem; }
+  .menu-oculto .menu-boton-mostrar {
+    display: inline-flex; position: fixed; top: .75rem; left: .75rem; z-index: 1031;
+    background: #1d273b; color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+  }
+  .menu-oculto .menu-boton-mostrar:hover, .menu-oculto .menu-boton-mostrar:focus-visible { background: #2b3a55; color: #fff; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar-vertical.navbar-expand-lg, .navbar-vertical.navbar-expand-lg ~ .page-wrapper { transition: none !important; }
+}
+
 /* Pantalla de acceso */
 /* Oxanium 5.3.0 (OFL-1.1), servida localmente: solo para la palabra "ORBIT" del login. */
 @font-face {

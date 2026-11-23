@@ -114,3 +114,19 @@ def test_expedientes_spinners_y_confirmaciones(app, entrar_como, monkeypatch, tm
 
     parametros = c.get("/m/expedientes_seguros/correo-por-defecto").get_data(as_text=True)
     assert "¿Cambiar el correo por defecto?" in parametros
+
+
+# ---------------------------------------------------------------- menú que se oculta
+
+def test_menu_se_puede_ocultar_en_todas_las_pantallas_con_menu(app, entrar_como, autorizado):
+    # menu.js va en un bloque propio del layout (head_hub): los módulos que reemplazan «head»
+    # sin super() (p. ej. el visor de Expedientes) no lo pierden.
+    c = entrar_como(autorizado)
+    html = c.get("/").data.decode()
+    assert "js/menu.js" in html and "data-menu-ocultar" in html and "data-menu-mostrar" in html
+    assert html.index("js/menu.js") < html.index("<body")      # antes de pintar: sin parpadeo
+    assert 'id="menu-principal"' in html and 'aria-controls="menu-principal"' in html
+
+
+def test_pantallas_publicas_sin_menu_no_cargan_menu_js(client):
+    assert "js/menu.js" not in client.get("/acceso").data.decode()

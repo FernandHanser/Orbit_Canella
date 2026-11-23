@@ -12,11 +12,13 @@
   data-sesion-aviso="{{ config.SESION_AVISO_SEGUNDOS }}" data-sesion-estado="{{ url_for('auth.sesion_estado') }}"
   data-sesion-extender="{{ url_for('auth.sesion_extender') }}" data-sesion-acceso="{{ url_for('auth.acceso') }}"
   data-csrf="{{ csrf_token() }}"{% endblock %}
+{# Antes de pintar: aplica «menú oculto» si así lo dejó el usuario (static/js/menu.js). #}
+{% block head_hub %}<script src="{{ estatico('js/menu.js') }}"></script>{% endblock %}
 {% block cuerpo %}
 {% set ep = request.endpoint or "" %}
 {% set bp_actual = request.blueprints[-1] if request.blueprints else "" %}
 <div class="page">
-  <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+  <aside class="navbar navbar-vertical navbar-expand-lg" id="menu-principal" data-bs-theme="dark">
     <div class="container-fluid">
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu-lateral" aria-controls="menu-lateral" aria-expanded="false" aria-label="Mostrar menú">
         <span class="navbar-toggler-icon"></span>
@@ -76,6 +78,14 @@
             </div>
           </div>
           <ul class="navbar-nav">
+            {# Solo en pantallas grandes: en celular el menú ya se pliega con el botón de arriba. #}
+            <li class="nav-item d-none d-lg-block">
+              <button type="button" class="nav-link border-0 bg-transparent w-100 text-start" data-menu-ocultar
+                      aria-controls="menu-principal" aria-expanded="true" title="Atajo: Ctrl + B">
+                <span class="nav-link-icon"><i class="ti ti-layout-sidebar-left-collapse"></i></span>
+                <span class="nav-link-title">Ocultar menú</span>
+              </button>
+            </li>
             <li class="nav-item">
               <form method="post" action="{{ url_for('auth.salir') }}" class="m-0">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -90,6 +100,11 @@
       </div>
     </div>
   </aside>
+
+  <button type="button" class="btn btn-icon menu-boton-mostrar" data-menu-mostrar
+          aria-controls="menu-principal" aria-expanded="true" title="Mostrar menú (Ctrl + B)" aria-label="Mostrar menú">
+    <i class="ti ti-layout-sidebar-left-expand"></i>
+  </button>
 
   <div class="page-wrapper fondo-sistema" style="background-image: linear-gradient(rgba(244, 245, 247, .7), rgba(244, 245, 247, .7)), url('{{ estatico('img/bk_index.jpg') }}')">
     {% block encabezado %}{% endblock %}
