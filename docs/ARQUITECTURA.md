@@ -265,9 +265,9 @@ hallazgos están en la publicación y en límites que conviene fijar antes de su
 
 | # | Hallazgo | Estado |
 |---|---|---|
-| N1 | Waitress solo habla HTTP: si el hub se publica en la red sin proxy con certificado, las contraseñas de STOD viajan sin cifrar | **Pendiente de decisión**: proxy con HTTPS (IIS/Nginx); mientras, no publicar el puerto fuera del servidor |
+| N1 | Waitress solo habla HTTP: si el hub se publica en la red sin proxy con certificado, las contraseñas de STOD viajan sin cifrar | **Resuelto en el procedimiento**: IIS con HTTPS delante y Waitress solo en `127.0.0.1` ([DESPLIEGUE.md](DESPLIEGUE.md)); falta que TI defina servidor, DNS y certificado |
 | N2 | Sin tope de tamaño de las peticiones: cada módulo tenía que acordarse de poner el suyo | **Corregido**: `SUBIDA_MAXIMA_MB` (25) → `MAX_CONTENT_LENGTH`; 413 «Archivo demasiado grande» en español (HTML y JSON). Pruebas en `tests/test_acceso.py` |
-| N3 | Detrás de un proxy, el bloqueo de login por IP se vuelve global (todos comparten la IP del proxy) | Pendiente: activar `ProxyFix` al resolver N1 |
+| N3 | Detrás de un proxy, el bloqueo de login por IP se vuelve global (todos comparten la IP del proxy) | **Corregido**: `PROXY_CONFIABLE` en `serve.py` (Waitress acepta `X-Forwarded-For/Proto` solo del proxy y descarta los de otro origen). Prueba en `tests/test_servidor.py` |
 | N4 | El historial de quién dio o quitó accesos solo vive en los logs (se borran a los 90/180 días) | Pendiente de decisión: tabla de auditoría permanente |
 | N5 | Escala: la búsqueda de logs lee archivos completos; las tareas lanzadas desde un botón ocupan un hilo de Waitress; `/salud` no prueba la base | Registrado, sin acción |
 

@@ -218,6 +218,7 @@ serve.py                  # servidor Waitress para ambientes distintos a desarro
 | [Interfaz](docs/INTERFAZ.md) | Plantillas, macros, estáticos, login y reglas de la CSP |
 | [Logs centrales](docs/LOGS.md) | Cómo emitir y consultar logs identificados por módulo |
 | [Ejecuciones y tareas programadas](docs/EJECUCIONES.md) | Registrar corridas y ejecutarlas sin sesión web |
+| [Publicar en la red](docs/DESPLIEGUE.md) | Windows Server + IIS con HTTPS, servicio de Windows, verificación y actualización |
 | [Plan de trabajo](docs/PLAN_DE_TRABAJO.md) | Fases, decisiones tomadas, login con STOD, seguridad urgente y orden |
 | [Expedientes de Seguros (Taller)](docs/PLAN_EXPEDIENTES_SEGUROS.md) | Módulo `expedientes_seguros`: datos en SAP, visor, paquete, correo y configuración |
 | [Corte de caja diario](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) | Módulo `corte_caja`: diseño, configuración, tarea programada y paso a producción |
@@ -273,7 +274,8 @@ Se lee de variables de entorno o del archivo `.env` (no versionado; plantilla en
 | `LOGIN_MAX_INTENTOS` / `LOGIN_BLOQUEO_MINUTOS` | 5 / 15 | Bloqueo en el hub tras intentos fallidos (no afecta la cuenta en STOD) |
 | `LOG_DIR`, `LOG_LEVEL`, `LOG_RETENCION_DIAS`, `LOG_CONSOLA`, `LOG_ARCHIVO` | ver [LOGS.md](docs/LOGS.md) | Logs |
 | `AUTOMATE_MODULOS` | todos | Lista de módulos a cargar, p. ej. `app.modulos.ejemplo` |
-| `HOST` / `PORT` | 127.0.0.1 / 8000 | Solo para `serve.py` |
+| `HOST` / `PORT` / `HILOS` | 127.0.0.1 / 8000 / 8 | Solo para `serve.py` |
+| `PROXY_CONFIABLE` | — | IP del proxy (IIS) cuyas cabeceras `X-Forwarded-For/Proto` se aceptan; `127.0.0.1` si IIS está en el mismo servidor. Ver [DESPLIEGUE.md](docs/DESPLIEGUE.md) |
 
 ### Otros ambientes
 
@@ -282,7 +284,7 @@ AUTOMATE_ENV=production python serve.py      # Waitress, compatible con Windows
 ```
 
 En `production`, `SECRET_KEY` es obligatoria y la cookie de sesión es `Secure`, así que se
-necesita HTTPS (IIS o Nginx como proxy inverso). Para probar en HTTP local:
+necesita HTTPS (IIS como proxy inverso: paso a paso en [DESPLIEGUE.md](docs/DESPLIEGUE.md)). Para probar en HTTP local:
 `SESSION_COOKIE_SECURE=0`.
 
 ---
@@ -310,7 +312,8 @@ necesita HTTPS (IIS o Nginx como proxy inverso). Para probar en HTTP local:
 
 - **Servidor de la base productiva**: los scripts para SQL Server están listos y probados
   ([scripts/sqlserver/](scripts/sqlserver/README.md)); falta definir en qué servidor se crea.
-- **Servidor y HTTPS**: dónde se aloja el hub (Windows Server/IIS, contenedor…) y el certificado.
+- **Servidor y HTTPS**: el procedimiento con Windows Server + IIS está listo ([DESPLIEGUE.md](docs/DESPLIEGUE.md));
+  falta que TI defina el servidor, el nombre DNS, el certificado y la cuenta de servicio.
 - **Autenticación corporativa**: si se integrará con Active Directory / Microsoft Entra ID; el
   login local está aislado en `core/auth.py`.
 - **Cola de tareas**: no se incluye; ver el punto de conexión en [EJECUCIONES.md](docs/EJECUCIONES.md).
