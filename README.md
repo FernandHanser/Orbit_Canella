@@ -9,6 +9,29 @@ Los comandos de este documento son para **Git Bash** en Windows.
 
 ---
 
+## Si eres nuevo en el proyecto
+
+Lee en este orden (unos 30 minutos) y no hace falta más para empezar:
+
+1. **Este README** hasta «Arquitectura»: arrancar el hub y por qué está hecho así.
+2. **[docs/MAPA.md](docs/MAPA.md)**: qué pasa al arrancar, el recorrido de una petición y en qué
+   archivo vive cada cosa.
+3. **[docs/GLOSARIO.md](docs/GLOSARIO.md)**: el vocabulario (módulo, ejecución, actor…).
+4. Según lo que vayas a hacer:
+
+| Vas a… | Lee |
+|---|---|
+| Crear una automatización nueva | [AGREGAR_MODULO.md](docs/AGREGAR_MODULO.md) (y copia `app/modulos/ejemplo/`) |
+| Tocar un módulo existente | Su guía (tabla «Guías», abajo) y el `__init__.py` del módulo |
+| Tocar el núcleo (`app/core/`) | [ARQUITECTURA.md](docs/ARQUITECTURA.md) completo |
+| Cambiar pantallas | [INTERFAZ.md](docs/INTERFAZ.md) |
+| Escribir pruebas | [PRUEBAS.md](docs/PRUEBAS.md) |
+
+**Ramas:** se trabaja en `dev`; `main` es lo que está en producción. Antes de subir cambios,
+`python -m pytest` debe pasar completo (incluye las reglas de arquitectura).
+
+---
+
 ## Arranque diario
 
 Con el proyecto ya instalado (ver [Instalación](#instalación-primera-vez)):
@@ -152,6 +175,9 @@ app/
 │   ├── paginacion.py     #   paginación común (consultas y listas)
 │   ├── seguridad.py      #   reglas de contraseña y cabeceras HTTP (CSP…)
 │   ├── formularios.py    #   formularios Flask-WTF (con CSRF)
+│   ├── sesion.py         #   vencimiento por inactividad y jornada
+│   ├── roles.py          #   superadmin / admin / usuario
+│   ├── migraciones.py    #   filtro de Alembic: nunca propone borrar tablas de otro módulo
 │   ├── models.py         #   Usuario, IntentoAcceso, Modulo, PermisoModulo, Ejecucion
 │   └── cli.py            #   comandos flask usuarios / modulos / tareas / logs
 ├── integraciones/        # sistemas externos compartidos
@@ -164,9 +190,11 @@ app/
 │                         #   hub/, auth/, admin/, errores/
 └── static/
     ├── css/automate.css  #   estilos propios
-    ├── js/               #   scripts propios (hoy: animación del logo del login)
+    ├── js/               #   interaccion (spinners, confirmaciones), sesion (aviso de
+    │                     #   vencimiento), menu (ocultar menú), emblema del login
     ├── img/              #   logo, fondo del login y del sistema
-    └── vendor/           #   Tabler 1.5.1, Tabler Icons 3.48.0, fuente Oxanium 5.3.0 (locales)
+    └── vendor/           #   Tabler, Tabler Icons, Oxanium, three.js, thinking-orbs (locales,
+                          #   versión fijada: ver vendor/README.md)
 migrations/               # Alembic (Flask-Migrate)
 scripts/sqlserver/        # creación de la base del hub en SQL Server
 docs/                     # guías (ver abajo)
@@ -181,6 +209,7 @@ serve.py                  # servidor Waitress para ambientes distintos a desarro
 
 | Guía | Para qué |
 |---|---|
+| [Mapa del código](docs/MAPA.md) | Arranque, recorrido de una petición, archivos de un módulo y dónde vive cada dato |
 | [Fortalezas del hub](docs/FORTALEZAS.md) | Resumen de lo que el hub resuelve (arquitectura, interfaz, errores, logs, pruebas, sesión y autorización), dónde está y cómo se verifica |
 | [Arquitectura](docs/ARQUITECTURA.md) | Principios del monolito modular, reglas de dependencias y atomicidad |
 | [Glosario y actores](docs/GLOSARIO.md) | Vocabulario común y quién puede hacer qué en la plataforma y en cada módulo |
