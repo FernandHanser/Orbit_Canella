@@ -170,6 +170,17 @@ def _instalar_errores(app: Flask) -> None:
             return jsonify(error="no_encontrado"), 404
         return render_template("errores/no_encontrado.html"), 404
 
+    @app.errorhandler(413)
+    def _demasiado_grande(_e):
+        tope = app.config.get("MAX_CONTENT_LENGTH") or 0
+        limite = f"{tope // (1024 * 1024)} MB" if tope >= 1024 * 1024 else f"{max(tope // 1024, 1)} KB"
+        mensaje = f"Lo que intentaste subir supera el límite de {limite}. Reduce el archivo e inténtalo de nuevo."
+        log.warning("Petición rechazada por tamaño", extra={"evento": "app.subida_demasiado_grande",
+                                                              "datos": {"ruta": request.path, "limite": limite}})
+        if es_peticion_api():
+            return jsonify(error="demasiado_grande", mensaje=mensaje), 413
+        return render_template("errores/generico.html", codigo=413, titulo="Archivo demasiado grande", detalle=mensaje), 413
+
     @app.errorhandler(HTTPException)
     def _http(e: HTTPException):
         if es_peticion_api():

@@ -266,6 +266,7 @@ Se lee de variables de entorno o del archivo `.env` (no versionado; plantilla en
 | `EJECUCIONES_SIN_CAMBIOS_DIAS` | 7 | Días que se conservan las ejecuciones `sin_cambios` (corridas programadas sin nada que procesar) |
 | `EXPEDIENTES_*` | — | Módulo Expedientes de Seguros: ver [PLAN_EXPEDIENTES_SEGUROS.md](docs/PLAN_EXPEDIENTES_SEGUROS.md#configuración) |
 | `CORTE_CAJA_*` | — | Módulo Corte de caja: ver [PLAN_INTEGRACION_CORTE_DE_CAJA.md](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md#configuración) |
+| `SUBIDA_MAXIMA_MB` | 25 | Tope de tamaño de cualquier petición, para todo el hub (413 «Archivo demasiado grande») |
 | `SESSION_COOKIE_SECURE` | 0 en dev, 1 en prod | Requiere HTTPS cuando vale 1 |
 | `SESION_INACTIVIDAD_MINUTOS` / `SESION_MAXIMA_HORAS` | 60 / 10 | Cierre por inactividad y por jornada máxima (ver [INTERFAZ.md](docs/INTERFAZ.md#expiración-de-la-sesión)) |
 | `SESION_AVISO_SEGUNDOS` | 120 | Antelación del aviso «Tu sesión está por vencer» |

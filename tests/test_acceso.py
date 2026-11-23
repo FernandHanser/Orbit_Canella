@@ -507,3 +507,25 @@ def test_se_muestra_el_nombre_y_stod_no_lo_sobrescribe(client, admin):
 def test_lista_marca_a_quien_no_tiene_nombre(entrar_como, admin, autorizado):
     html = entrar_como(admin).get("/admin/usuarios").get_data(as_text=True)
     assert "Sin nombre registrado" in html
+
+
+# ---------------------------------------------------------------- tope de tamaño de las peticiones
+
+def test_tope_de_subida_por_defecto(app):
+    assert app.config["MAX_CONTENT_LENGTH"] == 25 * 1024 * 1024
+
+
+def test_peticion_demasiado_grande_se_rechaza_con_413_en_espanol(app, client):
+    # El tope lo pone el hub para todos los módulos: la petición se corta antes de que una vista
+    # (o la validación CSRF) lea el cuerpo, así un módulo que olvide su límite no llena el disco.
+    app.config["MAX_CONTENT_LENGTH"] = 1024
+    r = client.post("/acceso", data={"usuario": "x", "contrasena": "y" * 2048})
+    assert r.status_code == 413
+    html = r.get_data(as_text=True)
+    assert "Archivo demasiado grande" in html and "1 KB" in html
+
+
+def test_peticion_demasiado_grande_en_api_responde_json(app, client):
+    app.config["MAX_CONTENT_LENGTH"] = 1024
+    r = client.post("/acceso", data={"usuario": "x", "contrasena": "y" * 2048}, headers={"Accept": "application/json"})
+    assert r.status_code == 413 and r.get_json()["error"] == "demasiado_grande"

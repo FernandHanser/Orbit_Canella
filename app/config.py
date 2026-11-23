@@ -65,6 +65,12 @@ class Config:
     SESION_AVISO_SEGUNDOS = int(_env("SESION_AVISO_SEGUNDOS", "120"))
     PERMANENT_SESSION_LIFETIME = timedelta(hours=SESION_MAXIMA_HORAS)
 
+    # Tope de tamaño de cualquier petición (formularios y archivos), para todo el hub: el servidor
+    # corta la subida antes de que una vista la lea, así un módulo que olvide su propio límite no
+    # llena el disco. Un módulo puede validar un límite menor (p. ej. la factura de Expedientes).
+    SUBIDA_MAXIMA_MB = int(_env("SUBIDA_MAXIMA_MB", "25"))
+    MAX_CONTENT_LENGTH = SUBIDA_MAXIMA_MB * 1024 * 1024
+
     # CSRF (Flask-WTF). Aplica a formularios y a peticiones POST/PUT/PATCH/DELETE de la API.
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # el token vive lo que dure la sesión

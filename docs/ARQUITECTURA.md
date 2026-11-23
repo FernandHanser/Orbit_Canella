@@ -257,6 +257,22 @@ tienen IPs y correos internos: el repositorio debe ser **privado**.
 
 ---
 
+## Auditoría pragmática del hub (23/11/2026)
+
+Alcance: solo la plataforma (login, sesión, autorización, roles, catálogo, ejecuciones, logs,
+consola, configuración, cabeceras, interfaz base), no los módulos. Sin errores de lógica; los
+hallazgos están en la publicación y en límites que conviene fijar antes de sumar módulos.
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| N1 | Waitress solo habla HTTP: si el hub se publica en la red sin proxy con certificado, las contraseñas de STOD viajan sin cifrar | **Pendiente de decisión**: proxy con HTTPS (IIS/Nginx); mientras, no publicar el puerto fuera del servidor |
+| N2 | Sin tope de tamaño de las peticiones: cada módulo tenía que acordarse de poner el suyo | **Corregido**: `SUBIDA_MAXIMA_MB` (25) → `MAX_CONTENT_LENGTH`; 413 «Archivo demasiado grande» en español (HTML y JSON). Pruebas en `tests/test_acceso.py` |
+| N3 | Detrás de un proxy, el bloqueo de login por IP se vuelve global (todos comparten la IP del proxy) | Pendiente: activar `ProxyFix` al resolver N1 |
+| N4 | El historial de quién dio o quitó accesos solo vive en los logs (se borran a los 90/180 días) | Pendiente de decisión: tabla de auditoría permanente |
+| N5 | Escala: la búsqueda de logs lee archivos completos; las tareas lanzadas desde un botón ocupan un hilo de Waitress; `/salud` no prueba la base | Registrado, sin acción |
+
+---
+
 ## Cuándo revisar este documento
 
 - Antes de agregar un módulo o un servicio compartido nuevo.
