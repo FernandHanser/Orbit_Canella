@@ -5,8 +5,11 @@
 * Un módulo no importa otro módulo ni los modelos ORM del núcleo (usa DTOs como
   ``ResumenEjecucion``).
 * No hay ciclos de importación entre archivos de ``app/``.
+* Las tablas llevan el prefijo de su dueño y las pantallas de un módulo usan una base del hub
+  (``base.html`` o ``base_publica.html``).
 """
 import ast
+import re
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -118,6 +121,33 @@ def test_las_plantillas_de_un_modulo_viven_en_templates_con_su_id():
         if plantillas.is_dir():
             violaciones += [(carpeta.name, p.name) for p in plantillas.iterdir() if p.name != carpeta.name]
     assert not violaciones
+
+
+_EXTIENDE_BASE_DEL_HUB = re.compile(r"""\{%-?\s*extends\s+["'](base|base_publica)\.html["']""")
+# Pantallas de un módulo que, a propósito, no usan una base del hub: "<módulo>/<archivo>": "motivo".
+# Saltarse la regla es una decisión visible aquí, no un descuido.
+EXCEPCIONES_PLANTILLAS: dict[str, str] = {}
+
+
+def test_las_pantallas_de_un_modulo_usan_una_base_del_hub():
+    # Con base.html la pantalla hereda menú, aviso de sesión, estilos, macros y mensajes; con
+    # base_publica.html, la página sin sesión. Fuera de la regla, por convención de nombre: las
+    # piezas que se incluyen en otra pantalla (_*.html) y los cuerpos de correo (correo_*.html).
+    faltan = []
+    for carpeta in _carpetas_de_modulos():
+        for plantilla in sorted((carpeta / "templates").rglob("*.html")):
+            nombre = plantilla.name
+            clave = f"{carpeta.name}/{nombre}"
+            if nombre.startswith(("_", "correo_")) or clave in EXCEPCIONES_PLANTILLAS:
+                continue
+            if not _EXTIENDE_BASE_DEL_HUB.search(plantilla.read_text(encoding="utf-8")):
+                faltan.append(clave)
+    assert not faltan, (
+        "Estas pantallas no extienden una base del hub: " + ", ".join(faltan) + ". Agrega "
+        '{% extends "base.html" %} (o "base_publica.html" si es sin sesión). Si es una pieza que se '
+        "incluye en otra pantalla, nómbrala con «_»; si es el cuerpo de un correo, con «correo_». "
+        "Ver docs/AGREGAR_MODULO.md#5-plantillas."
+    )
 
 
 def test_sin_ciclos_de_importacion():

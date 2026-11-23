@@ -125,7 +125,14 @@ cabecera `X-CSRFToken` con el valor de `csrf_token()`.
 {% endblock %}
 ```
 
-- Bloques disponibles: `titulo`, `encabezado`, `contenido`, `head` y `scripts`.
+- **Toda pantalla del módulo extiende `base.html`** (o `base_publica.html` si es sin sesión): así
+  hereda el menú, el aviso de sesión, los estilos, las macros y los mensajes sin hacer nada más.
+  Quedan fuera, por su nombre, las piezas que se incluyen en otra pantalla (`_checklist.html`) y
+  los cuerpos de correo (`correo_rechazo.html`). Lo verifica
+  `tests/test_arquitectura.py::test_las_pantallas_de_un_modulo_usan_una_base_del_hub`; una
+  excepción de verdad (p. ej. una vista de impresión) se declara en `EXCEPCIONES_PLANTILLAS` de esa
+  prueba, con el motivo.
+- Bloques disponibles: `titulo`, `encabezado`, `contenido`, `head`, `scripts` y `modales`.
 - Formularios POST: incluir `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`
   o usar un `FlaskForm` con `{{ form.hidden_tag() }}`.
 - Macros, estilos y reglas de la CSP: ver [INTERFAZ.md](INTERFAZ.md).
