@@ -284,7 +284,13 @@ pruebas no debe tocarla nunca: su `.env` apunta solo a `AUTOMATE_CANELLA_PRUEBAS
    correo va a `cajamauto2@canella.com.gt` con «[PRUEBA]» en el asunto
    ([PLAN_EXPEDIENTES_SEGUROS.md](PLAN_EXPEDIENTES_SEGUROS.md)). No hay que cambiarlo en pruebas.
 
-5. **Tablas**: `.venv\Scripts\flask --app wsgi db upgrade`.
+5. **Tablas y primer administrador** (`<usuario-stod>` es tu usuario de STOD):
+
+   ```powershell
+   .venv\Scripts\flask --app wsgi db upgrade
+   .venv\Scripts\flask --app wsgi db current                          # última migración con (head)
+   .venv\Scripts\flask --app wsgi usuarios superadmin <usuario-stod>
+   ```
 
 6. **Waitress como servicio**: igual que el paso 2 de esta guía, con el nombre de servicio `ORBIT`.
 
