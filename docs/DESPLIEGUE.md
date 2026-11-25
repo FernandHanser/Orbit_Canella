@@ -212,11 +212,11 @@ pruebas) y hace, en orden:
 1. Se niega a seguir si alguien editó archivos a mano en el servidor.
 2. `git pull --ff-only`.
 3. Detiene el servicio. En Windows no se puede reemplazar un paquete de Python que esté en uso.
-4. `pip install` y `flask db upgrade`. Si no hay nada nuevo, no hacen nada.
+4. `pip install` y migraciones (`flask db upgrade`). Si no hay nada nuevo, no hacen nada.
 5. Vuelve a arrancar el servicio, aunque un paso haya fallado, y espera a que `/salud` responda.
 
-Si un paso falla, se detiene y dice cuál. Opciones: `-Servicio ORBIT` y
-`-Salud http://127.0.0.1:8000/salud`.
+Si un paso falla, se detiene y dice cuál. El servicio, los requirements, las migraciones y el
+puerto los toma de `scripts/despliegue.psd1`; `-Servicio` y `-Salud` los cambian para una corrida.
 
 Al reiniciar, las sesiones abiertas siguen valiendo porque `SECRET_KEY` no cambia. Una tarea
 que esté corriendo en ese momento se corta y queda `interrumpida`
@@ -227,12 +227,15 @@ nueva traía migraciones, primero `flask --app wsgi db downgrade` hasta la revis
 
 ## Ambiente de pruebas (128.1.200.70, rama `dev`, Caddy)
 
-Corre la rama `dev` contra **la misma base que usa tu equipo**, con Caddy en lugar de IIS.
-Caddy es un solo `.exe` y genera su propio certificado. Todo lo instala
-[`scripts/instalar_pruebas.ps1`](../scripts/instalar_pruebas.ps1).
+Corre la rama `dev` contra **la misma base que usa tu equipo**, con Caddy en lugar de IIS. El
+Caddy del servidor es **uno solo, compartido** por todos los proyectos de prueba (`C:\Caddy`).
+Cada proyecto agrega su sitio en su propio puerto, sin cortar a los demás. Lo instala
+[`scripts/instalar_pruebas.ps1`](../scripts/instalar_pruebas.ps1), que es igual en todos los
+proyectos (skill `caddy-deploy`). Lo propio de ORBIT está en
+[`scripts/despliegue.psd1`](../scripts/despliegue.psd1).
 
 ```
-Navegador ──HTTPS 8443──▶ Caddy (certificado interno) ──HTTP 127.0.0.1:8000──▶ Waitress (serve.py)
+Navegador ──HTTPS 8443──▶ Caddy compartido (C:\Caddy) ──HTTP 127.0.0.1:8000──▶ Waitress (servicio ORBIT)
 ```
 
 ### Primera vez
@@ -241,7 +244,7 @@ En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «
 **Git for Windows** y el **ODBC Driver 17 o 18 for SQL Server**.
 
 1. Copia a una misma carpeta del servidor (p. ej. el escritorio, por escritorio remoto)
-   `scripts\instalar_pruebas.ps1` y el **`.env` de tu equipo**.
+   `scripts\instalar_pruebas.ps1`, `scripts\despliegue.psd1` y el **`.env` de tu equipo**.
 2. Abre PowerShell **como administrador** en esa carpeta:
 
    ```powershell
@@ -251,18 +254,21 @@ En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «
 3. Cuando muestre la llave, pégala en GitHub: *Orbit_Canella → Settings → Deploy keys → Add deploy
    key*, **sin** marcar *Allow write access*. Luego presiona Enter.
 4. Al terminar, entra a `https://128.1.200.70:8443` con tu usuario de STOD. El navegador avisará
-   del certificado: en pruebas se acepta.
+   del certificado: en pruebas se acepta. Para quitar el aviso en un equipo, se instala
+   `C:\Caddy\datos\pki\authorities\local\root.crt` en sus *Entidades de certificación raíz de
+   confianza*.
 
 Si algo falla, el script dice en qué paso. Se corrige y se vuelve a correr: salta lo que ya esté
 hecho.
 
-**Qué hace:** clona `dev` en `C:\ORBIT`, crea el `.venv` e instala dependencias. Copia el `.env` y
-le cambia solo lo del servidor: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8000`,
+**Qué hace:** revisa que los puertos 8000 y 8443 estén libres, clona `dev` en `C:\ORBIT`, crea el
+`.venv` e instala dependencias. Copia el `.env` y le cambia solo lo de `Env` en
+`despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8000`,
 `PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1`, `LOG_DIR` vacío y
-`CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes,
-descarga NSSM y Caddy a `C:\ORBIT\herramientas\`, instala los servicios `ORBIT` y `ORBIT-Caddy`,
-abre el 8443 y comprueba `/salud`. Opciones: `-Carpeta`, `-Rama`, `-Direccion`, `-Puerto` y
-`-Proxy http://128.1.200.140:8080`, si el servidor sale a internet por proxy.
+`CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes e
+instala el servicio `ORBIT`. Si falta, instala el Caddy compartido (servicio `Caddy`). Luego
+agrega el sitio `C:\Caddy\sitios\orbit.caddy`, recarga Caddy, abre el 8443 y comprueba `/salud`.
+Si el servidor sale a internet por proxy: `-Proxy http://128.1.200.140:8080`.
 
 ### Cada cambio
 
@@ -281,7 +287,7 @@ abre el 8443 y comprueba `/salud`. Opciones: `-Carpeta`, `-Rama`, `-Direccion`, 
   un usuario de dominio con acceso a ellas y dale lectura del `.env`:
 
   ```powershell
-  C:\ORBIT\herramientas\nssm.exe set ORBIT ObjectName "CANELLA\<usuario>" "<contraseña>"
+  C:\Caddy\nssm.exe set ORBIT ObjectName "CANELLA\<usuario>" "<contraseña>"
   icacls C:\ORBIT\.env /grant "CANELLA\<usuario>:R"
   Restart-Service ORBIT
   ```
