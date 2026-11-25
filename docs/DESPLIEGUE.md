@@ -275,12 +275,54 @@ instala el servicio `ORBIT`. Si falta, instala el Caddy compartido (servicio `Ca
 agrega el sitio `C:\Caddy\sitios\orbit.caddy`, recarga Caddy, abre el 8443 y comprueba `/salud`.
 Si el servidor sale a internet por proxy: `-Proxy http://128.1.200.140:8080`.
 
-### Cada cambio
+### Cada cambio: automático con GitHub Actions
 
-1. En tu equipo: `python -m pytest`, luego `git push origin dev`.
-2. En el servidor: `cd C:\ORBIT` y después `.\scripts\actualizar.ps1`.
+```
+git push dev ──▶ GitHub Actions ──▶ 1. Pruebas (máquina Windows de GitHub)
+                                    2. Si pasan: runner en 128.1.200.70 ──▶ actualizar.ps1 ──▶ /salud
+```
+
+1. En tu equipo: `git push origin dev`.
+2. Nada más. En la pestaña **Actions** del repositorio se ve cada corrida: quién, qué commit, las
+   pruebas, el despliegue y su log. Si las pruebas fallan, no se despliega.
 3. Probar en `https://128.1.200.70:8443`.
 4. Cuando todo esté probado, `dev` se pasa a `main` para producción.
+
+El flujo está en [`.github/workflows/despliegue-pruebas.yml`](../.github/workflows/despliegue-pruebas.yml).
+El paso del servidor corre `actualizar.ps1 -Commit <sha>`, que se niega a terminar si el servidor
+no quedó en el commit probado. Para desplegar sin hacer push: *Actions → Pruebas y despliegue
+(dev) → Run workflow*. A mano, en el servidor, sigue funcionando
+`cd C:\ORBIT; .\scripts\actualizar.ps1`.
+
+**El runner** es un agente de GitHub instalado como servicio en el servidor. Sale a GitHub por
+HTTPS a buscar trabajo, así que no se abre ningún puerto. Corre como `LocalSystem` para poder
+detener y arrancar el servicio `ORBIT`. Cualquiera con permiso de escritura en el repositorio puede
+ejecutar código en el servidor a través de él: el repositorio debe seguir siendo privado y con
+pocos colaboradores.
+
+#### Instalar el runner (una vez)
+
+En el servidor, PowerShell **como administrador**:
+
+1. En GitHub: *Orbit_Canella → Settings → Actions → Runners → New self-hosted runner → Windows*.
+   La página muestra los comandos con un token que vale una hora.
+2. Corre los comandos de **Download** de esa página, pero en la carpeta `C:\actions-runner\orbit`
+   en lugar de `C:\actions-runner` (un runner por proyecto).
+3. Corre el `config.cmd` de la sección **Configure**, agregándole al final:
+
+   ```powershell
+   --name srv70-orbit --labels orbit-pruebas --runasservice --unattended
+   ```
+
+4. Pasa el servicio a `LocalSystem` y deja que git confíe en `C:\ORBIT`, que es de otro usuario:
+
+   ```powershell
+   $s = (Get-Service "actions.runner.*orbit*").Name; sc.exe config $s obj= LocalSystem; Restart-Service $s
+   git config --system --add safe.directory C:/ORBIT
+   ```
+
+5. En GitHub, *Settings → Actions → Runners* debe mostrar `srv70-orbit` como **Idle**. Para la
+   primera prueba: *Actions → Pruebas y despliegue (dev) → Run workflow*.
 
 ### Cuidado
 

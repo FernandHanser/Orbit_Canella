@@ -9,13 +9,18 @@
     Lo propio del proyecto (servicio, requirements, migraciones, puerto) está en despliegue.psd1;
     este archivo es igual en todos los proyectos (plantilla del skill caddy-deploy).
 
+    Lo corre el runner de GitHub Actions en cada push (.github/workflows/despliegue-pruebas.yml),
+    o una persona a mano.
+
 .EXAMPLE
     cd C:\<CARPETA>
     .\scripts\actualizar.ps1
 #>
 param(
     [string]$Servicio = "",
-    [string]$Salud = ""
+    [string]$Salud = "",
+    # Commit que se probó en Actions: el servidor debe quedar en él o en uno posterior.
+    [string]$Commit = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +38,12 @@ Set-Location (Split-Path -Parent $PSScriptRoot)
 
 function Write-Paso([string]$texto) { Write-Host "`n== $texto" -ForegroundColor Cyan }
 
-function Assert-Salida([string]$paso) {
+# Corre un programa externo mostrando su salida y falla solo por su código de salida. git, pip y
+# alembic escriben avisos normales en stderr; sin consola (runner de Actions), PowerShell 5.1 los
+# trata como errores y con ErrorActionPreference=Stop abortaría el script.
+function Invoke-Programa([string]$paso, [scriptblock]$comando) {
+    $anterior = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    try { & $comando 2>&1 | ForEach-Object { Write-Host "$_" } } finally { $ErrorActionPreference = $anterior }
     if ($LASTEXITCODE -ne 0) { throw "Falló: $paso (código $LASTEXITCODE)" }
 }
 
@@ -41,17 +51,22 @@ $python = ".venv\Scripts\python.exe"
 if (-not (Test-Path $python)) { throw "No existe $python. ¿Es la carpeta del proyecto y está creado el entorno virtual?" }
 if (-not (Get-Service $Servicio -ErrorAction SilentlyContinue)) { throw "No existe el servicio '$Servicio' (correr antes instalar_pruebas.ps1)." }
 
-$rama = (git rev-parse --abbrev-ref HEAD); Assert-Salida "leer la rama"
-$cambiosLocales = git status --porcelain --untracked-files=no; Assert-Salida "git status"
+$rama = (git rev-parse --abbrev-ref HEAD)
+if ($LASTEXITCODE -ne 0) { throw "No se pudo leer la rama. Si corre como otro usuario: git config --system --add safe.directory $((Get-Location).Path -replace '\\', '/')" }
+$cambiosLocales = git status --porcelain --untracked-files=no
 if ($cambiosLocales) {
     throw "Hay archivos versionados modificados en el servidor (no se editan a mano). Revisar con: git status"
 }
 
 Write-Paso "Traer '$rama' de GitHub"
 $antes = (git rev-parse HEAD)
-git pull --ff-only origin $rama; Assert-Salida "git pull"
+Invoke-Programa "git pull" { git pull --ff-only origin $rama }
 $despues = (git rev-parse HEAD)
-if ($antes -eq $despues) { Write-Host "Sin commits nuevos." } else { git --no-pager log --oneline "$antes..$despues" }
+if ($antes -eq $despues) { Write-Host "Sin commits nuevos." } else { git --no-pager log --oneline "$antes..$despues" | Write-Host }
+if ($Commit) {
+    git merge-base --is-ancestor $Commit HEAD
+    if ($LASTEXITCODE -ne 0) { throw "El servidor quedó en $($despues.Substring(0, 7)), que no incluye el commit probado $($Commit.Substring(0, 7))." }
+}
 # El pull pudo traer cambios en despliegue.psd1.
 $P = Import-PowerShellDataFile (Join-Path $PSScriptRoot "despliegue.psd1")
 
@@ -62,11 +77,11 @@ try {
         Write-Paso "Dependencias"
         $argsPip = @("-m", "pip", "install", "--disable-pip-version-check", "-q")
         foreach ($archivo in $P.Requisitos) { $argsPip += @("-r", $archivo) }
-        & $python @argsPip; Assert-Salida "pip install"
+        Invoke-Programa "pip install" { & $python @argsPip }
     }
     if ($P.Migraciones) {
         Write-Paso "Migraciones"
-        & $python @($P.Migraciones); Assert-Salida "migraciones"
+        Invoke-Programa "migraciones" { & $python @($P.Migraciones) }
     }
 }
 finally {

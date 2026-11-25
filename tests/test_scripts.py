@@ -40,6 +40,18 @@ def test_el_puerto_interno_lo_pone_el_instalador():
     assert _valor("HOST") == "127.0.0.1"
 
 
+def test_el_workflow_despliega_solo_si_pasan_las_pruebas():
+    """Despliegue continuo: push a dev → pruebas en GitHub → actualizar.ps1 en el runner del servidor."""
+    flujo = (RAIZ / ".github" / "workflows" / "despliegue-pruebas.yml").read_text(encoding="utf-8")
+    assert re.search(r"push:\s*\n\s*branches: \[dev\]", flujo)
+    assert "needs: pruebas" in flujo
+    assert f"runs-on: [self-hosted, windows, {_valor('Nombre').lower()}-pruebas]" in flujo
+    assert "python -m pytest" in flujo
+    # Se despliega la carpeta instalada, y el commit que se probó
+    assert f"working-directory: {_valor('Carpeta')}" in flujo
+    assert r".\scripts\actualizar.ps1 -Commit ${{ github.sha }}" in flujo
+
+
 @pytest.mark.parametrize("archivo", ARCHIVOS, ids=lambda p: p.name)
 def test_powershell_sin_errores_de_sintaxis(archivo):
     powershell = shutil.which("powershell")

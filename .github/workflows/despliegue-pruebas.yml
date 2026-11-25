@@ -1,0 +1,45 @@
+# Despliegue continuo al servidor de pruebas 128.1.200.70 (docs/DESPLIEGUE.md, skill caddy-deploy).
+#
+# Cada push a dev: primero las pruebas en una máquina de GitHub; si pasan, el runner instalado
+# en el servidor corre scripts/actualizar.ps1 (pull, dependencias, migraciones, reinicio y salud).
+# El runner sale a GitHub por HTTPS: no se abre ningún puerto del servidor.
+name: Pruebas y despliegue (dev)
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:   # botón «Run workflow» en la pestaña Actions
+
+# Un despliegue a la vez; si llegan dos pushes seguidos, el viejo que aún espera se cancela.
+concurrency:
+  group: despliegue-pruebas
+  cancel-in-progress: false
+
+jobs:
+  pruebas:
+    name: Pruebas
+    runs-on: windows-latest   # mismo sistema que el servidor
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Dependencias
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+      - name: python -m pytest
+        run: python -m pytest
+
+  desplegar:
+    name: Desplegar en 128.1.200.70
+    needs: pruebas
+    runs-on: [self-hosted, windows, orbit-pruebas]
+    timeout-minutes: 20
+    steps:
+      # Sin checkout: el runner actualiza la copia instalada en C:\ORBIT, no su carpeta de trabajo.
+      - name: actualizar.ps1
+        shell: powershell
+        working-directory: C:\ORBIT
+        run: .\scripts\actualizar.ps1 -Commit ${{ github.sha }}
