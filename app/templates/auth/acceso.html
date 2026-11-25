@@ -12,16 +12,15 @@
     <h2 class="h2 text-center mb-4">Iniciar sesión</h2>
     <form method="post" action="{{ url_for('auth.acceso', siguiente=siguiente) if siguiente else url_for('auth.acceso') }}" autocomplete="on" novalidate data-cargando="Validando con STOD…">
       {{ form.hidden_tag() }}
-      {{ campo(form.usuario, autocomplete="username", autofocus=True) }}
-      {{ campo(form.contrasena, autocomplete="current-password") }}
+      {# Tras un intento fallido el usuario ya viene escrito: el cursor va directo a la contraseña. #}
+      {% set con_usuario = (form.usuario.data or "")|length > 0 %}
+      {{ campo(form.usuario, autocomplete="username", autofocus=not con_usuario) }}
+      {{ campo(form.contrasena, autocomplete="current-password", autofocus=con_usuario, revelar=True) }}
       <div class="form-footer">
         <button type="submit" class="btn btn-primary w-100"><i class="ti ti-login-2 me-2"></i>Entrar</button>
       </div>
     </form>
   </div>
 </div>
-<div class="text-center text-secondary mt-3 small">
-  Usa el mismo usuario y contraseña de STOD.<br>
-  ¿No tienes acceso o olvidaste tu contraseña? Solicítalo a la mesa de ayuda Canella.
-</div>
+<p class="acceso-ayuda text-center mt-3 mb-0">¿Sin acceso o sin contraseña? Escribe a la mesa de ayuda Canella.</p>
 {% endblock %}

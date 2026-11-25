@@ -46,7 +46,7 @@ todo el ancho. Queda un ícono fijo arriba a la izquierda para mostrarlo de nuev
 | Macro | Qué dibuja |
 |---|---|
 | `encabezado(titulo, pretitulo)` | Encabezado de página. Con botones a la derecha: `{% call encabezado("Título") %}<a class="btn">…</a>{% endcall %}` |
-| `campo(form.campo, ayuda=None, autocomplete=None)` | Campo de formulario WTForms con etiqueta, errores y ayuda |
+| `campo(form.campo, ayuda=None, autocomplete=None, autofocus=False, revelar=False)` | Campo de formulario WTForms con etiqueta, errores y ayuda. Con `revelar=True` (contraseñas) agrega el botón del ojo para mostrar lo escrito (`data-revelar-contrasena`, ver abajo). Los validadores llevan siempre su mensaje en español (`DataRequired(message=…)`): sin él, WTForms responde en inglés |
 | `interruptor(form.campo_booleano, ayuda=None)` | Casilla tipo switch |
 | `estado_ejecucion(estado)` | Etiqueta de color para `exito`, `advertencia`, `error`, `en_curso` |
 | `nivel_log(nivel)` | Etiqueta de color para niveles de log |
@@ -135,6 +135,7 @@ está en `base.html`). Un módulo solo agrega atributos al `<form>`, sin escribi
 | Atributo | Efecto | Cuándo usarlo |
 |---|---|---|
 | `data-cargando="Texto…"` | Al enviar, deshabilita los botones del formulario y muestra un spinner con el texto. Ignora clics repetidos. **También en un enlace `<a>`** que abre una página lenta (consulta SAP u otro sistema): el enlace muestra el spinner y no admite otro clic | **Siempre** que la acción pueda tardar más de un segundo (ejecutar tareas, consultar sistemas externos) |
+| `data-revelar-contrasena` (en un `<button>` con `aria-controls` = id del campo) | Alterna entre mostrar y ocultar la contraseña (ícono `ti-eye` / `ti-eye-off`, `aria-pressed` y `aria-label` cambian con él). Al enviar el formulario se vuelve a ocultar. El ojo propio de Edge (`::-ms-reveal`) se oculta en el CSS para que no haya dos | Lo arma `campo(..., revelar=True)`; no escribirlo a mano |
 | `data-confirmar="Mensaje"` (+ `-titulo`, `-boton`) | Abre el modal de confirmación; solo envía si el usuario confirma. Con `data-confirmar-si="<selector CSS>"` solo confirma si algo del formulario coincide (p. ej. `input[name=rol][value=admin]:checked`) | Solo para efectos **irreversibles o hacia terceros**: enviar correos, mover o borrar datos, escribir en SAP. No en acciones de solo lectura: un modal innecesario entrena a ignorarlo |
 
 El mensaje del modal debe decir **qué va a pasar** (qué se envía, qué se mueve, a quién), no
@@ -232,32 +233,33 @@ módulo se declara en `DefinicionModulo(icono="<nombre>")` sin el prefijo `ti-`.
 | Fondo | `static/img/bk_index.jpg` | Login (capa clara al 35 %) y área de contenido del sistema (capa al 70 %) |
 | Fuente de "ORBIT" | `static/vendor/oxanium-5.3.0/` (Oxanium 800, OFL) | Solo en el título del login |
 | Estilos propios | `static/css/automate.css` | Todo el sistema |
-| Emblema del login | `static/js/emblema-canella.js` (thinking-orbs, `static/vendor/thinking-orbs-0.3.2/`) + `.emblema` en el CSS | Login: orb de puntos (faja ondulante) sobre el disco de marca, con el logotipo encima, que flota y respira. Respaldo de la esfera 3D anterior: `static/js/emblema-esfera-3d.js` (no se carga) |
+| Emblema del login | `static/js/emblema-canella.js` (thinking-orbs, `static/vendor/thinking-orbs-0.3.2/`) + `.emblema` en el CSS | Login: orb de puntos (faja ondulante) dentro del disco de marca, con el logotipo encima. El disco está fijo; solo se mueven las partículas. Respaldo de la esfera 3D anterior: `static/js/emblema-esfera-3d.js` (no se carga) |
 | Parallax del login | `static/js/parallax-acceso.js` | Login: fondo y frente siguen al mouse a distinto ritmo |
 | Cerrar sesión | `.nav-cerrar-sesion` en el CSS | Ícono en rojo en el menú lateral |
 
 Colores del título del login: degradado `#0b5e8a` → `#0e8f96` (versiones profundas del celeste
 y aqua del fondo) para "ORBIT" y `#1a2831` (azul noche del logo) para "Canella". El emblema
-usa el `#1a2831` de disco, puntos en el celeste `#a4d1e4` del fondo, el logotipo en blanco
-encima y el `#0e8f96` en el resplandor de alrededor.
+usa el `#1a2831` de disco (sin sombra ni resplandor desde el 25/11/2026), puntos en el celeste
+`#a4d1e4` del fondo y el logotipo en blanco encima.
 
 Animaciones del login (todas se desactivan si el sistema tiene "reducir movimiento"; si el orb no
 carga, el emblema queda como insignia plana: el fondo `#1a2831` de `.emblema` más el logotipo en
 blanco, ya correctos en el HTML/CSS sin depender de JavaScript):
 
-- **Emblema** (`emblema-canella.js` + `.emblema` en el CSS): la insignia flota hacia destinos
-  aleatorios y respira (crece y encoge, con el resplandor de alrededor al mismo ritmo). Dentro,
+- **Emblema** (`emblema-canella.js` + `.emblema` en el CSS): el disco está quieto (no flota, no
+  respira, sin sombra). Dentro,
   un orb de puntos de [thinking-orbs](https://github.com/Jakubantalik/thinking-orbs), variante
   `composing` (una faja de varias bandas que ondula alrededor de la esfera), dibujado en canvas 2D sin WebGL; densidad 1.4×
   porque la librería está afinada para 64 px y el emblema mide 120. El logotipo CANELLA va
   encima del orb. Con "reducir movimiento" el
-  orb queda en un cuadro fijo y la insignia solo respira.
-- **Respiración** (`.fondo-capa`, `.fondo-imagen` y `.fondo-acceso .container-tight` en el CSS):
-  el fondo se acerca y aleja con dos ritmos (24 s y 15 s, escala 1.03–1.12) y el frente con otro
-  (12 s, escala 1–1.025).
+  orb queda en un cuadro fijo.
+- **Respiración** (`.fondo-capa` y `.fondo-imagen` en el CSS): el fondo se acerca y aleja con
+  dos ritmos (24 s y 15 s, escala 1.03–1.12).
 - **Parallax con el mouse** (`parallax-acceso.js`): el fondo se desplaza hasta 24 px en sentido
-  contrario al cursor y el frente hasta 10 px a favor, con inercia; al salir de la ventana vuelven
-  al centro. Solo con mouse (no en pantallas táctiles). Usa la propiedad `translate`, que se suma
+  contrario al cursor, con inercia; al salir de la ventana vuelve al centro.
+- **El frente no se mueve** (emblema, título y formulario; desde el 25/11/2026): antes crecía y
+  seguía al mouse, y movía el campo que la persona estaba por tocar. Solo el fondo da la
+  profundidad. Solo con mouse (no en pantallas táctiles). Usa la propiedad `translate`, que se suma
   al `scale` de la respiración. Se desplaza la imagen dentro de su capa para no mostrar bordes.
 
 Textos fijos:
@@ -266,7 +268,15 @@ Textos fijos:
   del login es la excepción: "ORBIT" (primera palabra del nombre) + "Automate", fijo en
   `base_publica.html`.
 - Pie de página: `base.html`.
-- Aviso de ayuda del login: `auth/acceso.html`.
+- Aviso de ayuda del login: `auth/acceso.html` (una línea, `.acceso-ayuda`: 14 px, más oscura y
+  con un velo claro porque va sobre la ilustración del fondo).
+
+Comportamiento del formulario de acceso (auditoría Krug del 25/11/2026):
+
+- Al abrir, el cursor está en **Usuario**. Tras un intento fallido el usuario se conserva, la
+  contraseña se borra y el cursor va directo a **Contraseña**.
+- Campos vacíos: «Escribe tu usuario.» / «Escribe tu contraseña.» bajo cada campo.
+- Botón del ojo para ver la contraseña: oculta por defecto y se vuelve a ocultar al enviar.
 
 
 ## Origen de los datos (SAP)

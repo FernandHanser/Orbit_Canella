@@ -26,14 +26,16 @@ def _campo_nombre(etiqueta: str) -> StringField:
 
 
 class FormAcceso(FlaskForm):
-    usuario = StringField("Usuario STOD", validators=[DataRequired(), Length(max=100)])
-    contrasena = PasswordField("Contraseña", validators=[DataRequired(), Length(max=256)])
+    usuario = StringField("Usuario STOD", validators=[DataRequired(message="Escribe tu usuario."), Length(max=100)])
+    contrasena = PasswordField(
+        "Contraseña", validators=[DataRequired(message="Escribe tu contraseña."), Length(max=256)],
+    )
 
 
 class FormPrerregistro(FlaskForm):
     usuario_stod = StringField(
         "Usuario STOD",
-        validators=[DataRequired(), Length(max=100), Regexp(PATRON_USUARIO_STOD, message="Usuario no válido.")],
+        validators=[DataRequired(message="Indica el usuario STOD."), Length(max=100), Regexp(PATRON_USUARIO_STOD, message="Usuario no válido.")],
     )
     # STOD no guarda el nombre: se registra aquí y es el que se muestra en el sistema.
     nombres = _campo_nombre("Nombres")

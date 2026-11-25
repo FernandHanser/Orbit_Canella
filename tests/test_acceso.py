@@ -48,6 +48,37 @@ def test_pantalla_de_acceso(client):
     assert "Usuario STOD" in html
 
 
+def _input(html, id_campo):
+    """La etiqueta <input> del campo, para revisar sus atributos."""
+    return re.search(rf'<input[^>]*id="{id_campo}"[^>]*>', html).group(0)
+
+
+def test_acceso_vacio_avisa_en_espanol(client):
+    html = client.post("/acceso", data={"usuario": "", "contrasena": ""}).get_data(as_text=True)
+    assert "Escribe tu usuario." in html and "Escribe tu contraseña." in html
+    assert "This field is required" not in html
+
+
+def test_acceso_foco_en_usuario_al_abrir(client):
+    html = client.get("/acceso").get_data(as_text=True)
+    assert "autofocus" in _input(html, "usuario") and "autofocus" not in _input(html, "contrasena")
+
+
+def test_tras_contrasena_incorrecta_el_foco_va_a_la_contrasena(client, autorizado):
+    html = entrar(client, "autorizado", "incorrecta").get_data(as_text=True)
+    assert 'value="autorizado"' in _input(html, "usuario")
+    assert "autofocus" in _input(html, "contrasena") and "autofocus" not in _input(html, "usuario")
+    assert "incorrecta" not in _input(html, "contrasena")   # la contraseña no se devuelve en la página
+
+
+def test_acceso_permite_mostrar_la_contrasena(client):
+    html = client.get("/acceso").get_data(as_text=True)
+    boton = re.search(r"<button[^>]*data-revelar-contrasena[^>]*>", html).group(0)
+    assert 'type="button"' in boton and 'aria-controls="contrasena"' in boton
+    assert 'aria-pressed="false"' in boton and 'aria-label="Mostrar contraseña"' in boton
+    assert 'type="password"' in _input(html, "contrasena")
+
+
 # ---------------------------------------------------------------- inicio de sesión con STOD
 
 def test_primer_ingreso_crea_usuario_sin_modulos(app, client):
@@ -321,6 +352,11 @@ def test_prerregistro_valida_contra_stod(app, entrar_como, admin, autorizado):
     crear_usuario("otro", en_hub=False)
     assert "No se pudo consultar STOD" in c.post("/admin/usuarios/nuevo", data={**NOMBRE, "usuario_stod": "otro"}).get_data(as_text=True)
     assert Usuario.query.filter_by(usuario_stod="otro").first() is None
+
+
+def test_prerregistro_sin_usuario_avisa_en_espanol(entrar_como, admin):
+    html = entrar_como(admin).post("/admin/usuarios/nuevo", data={**NOMBRE, "usuario_stod": ""}).get_data(as_text=True)
+    assert "Indica el usuario STOD." in html and "This field is required" not in html
 
 
 def test_prerregistro_de_inactivo_en_stod_avisa(app, entrar_como, admin):
