@@ -168,3 +168,18 @@ def test_usuarios_admin_no_puede_abrir_al_superadmin(entrar_como, admin, superad
 def test_catalogo_con_acciones_fijas(entrar_como, superadmin):
     html = entrar_como(superadmin).get("/admin/modulos").data.decode()
     assert 'th class="w-1 col-acciones"' in html and '<td class="col-acciones">' in html
+
+
+# ---------------------------------------------------------------- navegación y modales (25/11/2026)
+
+def test_menu_muestra_el_nombre_completo_del_modulo_al_pasar_el_mouse(entrar_como, autorizado):
+    html = entrar_como(autorizado).get("/").data.decode()
+    assert 'title="Módulo de ejemplo"' in html
+
+
+def test_aviso_de_sesion_sin_anuncio_cada_segundo_y_con_cuenta_pequena(entrar_como, autorizado):
+    import re
+    html = entrar_como(autorizado).get("/").data.decode()
+    cuenta = re.search(r"<div[^>]*data-sesion-cuenta[^>]*>", html).group(0)
+    assert "aria-live" not in cuenta
+    assert "data-sesion-mini" in html and "data-sesion-cuenta-mini" in html

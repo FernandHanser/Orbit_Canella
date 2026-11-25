@@ -139,16 +139,19 @@
     modal.querySelector("[data-modal-icono]").className = "ti ti-alert-triangle mb-2 modal-confirmar-icono text-" + color;
 
     var instancia = Modal.getOrCreateInstance(modal);
+    var origen = document.activeElement;   // el botón que lo abrió: ahí vuelve el foco al cerrar
     // Foco en "Cancelar": un Enter accidental no ejecuta la acción.
     modal.addEventListener("shown.bs.modal", function () {
       var cancelar = modal.querySelector("[data-bs-dismiss=modal].btn");
       if (cancelar) cancelar.focus();
     }, { once: true });
-    if (opciones.devolverFoco) {
-      modal.addEventListener("hidden.bs.modal", function () {
-        if (document.querySelector(".modal.show")) opciones.devolverFoco.focus();
-      }, { once: true });
-    }
+    modal.addEventListener("hidden.bs.modal", function () {
+      if (document.querySelector(".modal.show")) {
+        if (opciones.devolverFoco) opciones.devolverFoco.focus();
+      } else if (origen && origen !== document.body && document.contains(origen)) {
+        origen.focus();
+      }
+    }, { once: true });
     aceptar.onclick = function () {
       instancia.hide();
       opciones.alConfirmar();

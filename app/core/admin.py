@@ -5,7 +5,9 @@ verifica ``autorizacion.controlar_acceso`` para todo el Blueprint ``admin``.
 """
 from __future__ import annotations
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
+from datetime import date
+
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
 from app.core.catalogo import sincronizar_catalogo
@@ -15,6 +17,7 @@ from app.core.logs import NIVELES, buscar_logs, get_logger
 from app.core.roles import ROLES_ASIGNABLES_WEB
 from app.core.models import Ejecucion, Modulo, PermisoModulo, Usuario
 from app.core.paginacion import POR_PAGINA, PaginaLista, pagina_actual
+from app.core.peticiones import es_url_segura
 from app.core.registro import registro
 from app.extensions import db
 
@@ -60,6 +63,28 @@ def _nombres_modulos() -> dict[str, str]:
     return nombres
 
 
+# «Volver» regresa a la lista tal como se dejó (filtros y página), no a su primera página.
+# Cada lista recuerda en la sesión su última dirección; el detalle la usa para su botón.
+LISTAS = {"usuarios": "admin.usuarios", "ejecuciones": "admin.ejecuciones"}
+
+
+def _recordar_lista(clave: str) -> None:
+    session[f"lista_{clave}"] = request.full_path.rstrip("?")
+
+
+def url_volver(clave: str) -> str:
+    base = url_for(LISTAS[clave])
+    guardada = session.get(f"lista_{clave}")
+    if guardada and es_url_segura(guardada) and guardada.split("?", 1)[0] == base:
+        return guardada
+    return base
+
+
+@bp.context_processor
+def _contexto_admin():
+    return {"url_volver": url_volver}
+
+
 # Reglas de la jerarquía (el superadministrador solo se asigna por consola):
 def puede_editar(objetivo: Usuario) -> bool:
     """Los administradores no editan al superadministrador."""
@@ -88,6 +113,7 @@ def puede_cambiar_rol(objetivo: Usuario) -> bool:
 
 @bp.route("/usuarios")
 def usuarios():
+    _recordar_lista("usuarios")
     pagina = Usuario.query.order_by(Usuario.usuario_stod).paginate(page=pagina_actual(), per_page=POR_PAGINA, error_out=False)
     return render_template("admin/usuarios.html", usuarios=pagina.items, paginacion=pagina)
 
@@ -213,6 +239,7 @@ def modulo_estado(modulo_id: str):
 
 @bp.route("/ejecuciones")
 def ejecuciones():
+    _recordar_lista("ejecuciones")
     modulo = request.args.get("modulo") or None
     estado = request.args.get("estado") or None
     consulta = Ejecucion.query
@@ -232,8 +259,15 @@ def ejecuciones():
 
 @bp.route("/ejecuciones/<ejecucion_id>")
 def ejecucion_detalle(ejecucion_id: str):
-    ejecucion = db.session.get(Ejecucion, ejecucion_id) or abort(404)
-    eventos = buscar_logs(current_app.config["LOG_DIR"], ejecucion_id=ejecucion.id, dias=31, limite=1000)
+    ejecucion = db.session.get(Ejecucion, ejecucion_id)
+    if ejecucion is None:
+        # Las ejecuciones «sin cambios» antiguas se purgan; sus eventos pueden seguir en los logs.
+        flash("Esa ejecución ya no está registrada; se muestran los eventos que quedan de ella.", "info")
+        return redirect(url_for("admin.logs", ejecucion_id=ejecucion_id, nivel="", dias=current_app.config["LOG_RETENCION_DIAS"]))
+    # Se buscan los logs desde el día en que empezó (hasta donde alcance la retención), no solo el último mes.
+    retencion = current_app.config["LOG_RETENCION_DIAS"]
+    dias = min((date.today() - ejecucion.inicio.date()).days + 2, retencion)
+    eventos = buscar_logs(current_app.config["LOG_DIR"], ejecucion_id=ejecucion.id, dias=dias, limite=1000)
     return render_template("admin/ejecucion_detalle.html", ejecucion=ejecucion, eventos=list(reversed(eventos)),
                            nombres_modulos=_nombres_modulos())
 

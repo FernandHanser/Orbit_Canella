@@ -137,6 +137,14 @@ tr[data-fila-enlace]:hover > .col-acciones { background-color: var(--tblr-bg-sur
 /* Error de una ejecución, en una línea bajo su estado (el texto completo, al pasar el mouse). */
 .ejecucion-error { max-width: 18rem; }
 
+/* Cuenta del fin de jornada tras cerrar el aviso con «Entendido» (static/js/sesion.js). */
+.sesion-cuenta-mini {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 1040;
+  padding: .4rem .75rem; border-radius: var(--tblr-border-radius);
+  background: var(--tblr-bg-surface); color: var(--tblr-warning-text-emphasis, #8a5300);
+  border: 1px solid var(--tblr-warning); box-shadow: var(--tblr-shadow-card); font-size: .875rem;
+}
+
 /* Tarjetas de módulos en el inicio */
 .tarjeta-modulo .icono-modulo { width: 3rem; height: 3rem; font-size: 1.6rem; }
 

@@ -2,8 +2,8 @@
 {% from "_macros.html" import campo, interruptor, encabezado, avatar_persona %}
 {% block titulo %}{{ "Registrar usuario STOD" if usuario is none else usuario.nombre_completo }}{% endblock %}
 {% block encabezado %}
-  {% call encabezado("Registrar usuario STOD" if usuario is none else usuario.nombre_completo, "Usuarios y permisos") %}
-    <a href="{{ url_for('admin.usuarios') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% call encabezado("Registrar usuario STOD" if usuario is none else usuario.nombre_completo, "Usuarios y permisos", pretitulo_url=url_volver("usuarios")) %}
+    <a href="{{ url_volver('usuarios') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
   {% endcall %}
 {% endblock %}
 {% macro selector_rol() %}
@@ -105,7 +105,7 @@
         {% endif %}
       </div>
       <div class="card-footer text-end">
-        <a href="{{ url_for('admin.usuarios') }}" class="btn btn-link">Cancelar</a>
+        <a href="{{ url_volver('usuarios') }}" class="btn btn-link">Cancelar</a>
         <button type="submit" class="btn btn-primary">{{ "Registrar" if usuario is none else "Guardar cambios" }}</button>
       </div>
     </form>

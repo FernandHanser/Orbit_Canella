@@ -1,9 +1,11 @@
-{# Tabla de eventos de log. Espera ``eventos`` (lista de dict) y ``nombres_modulos`` (id → nombre). #}
+{# Tabla de eventos de log. Espera ``eventos`` (lista de dict) y ``nombres_modulos`` (id → nombre).
+   Opcionales: ``mensaje_vacio`` (texto sin eventos) y ``sin_columna_ejecucion`` (en el detalle de una
+   ejecución, donde todas las filas son la misma). #}
 {% from "_macros.html" import nivel_log %}
 <div class="table-responsive">
   <table class="table table-vcenter card-table table-sm tabla-logs">
     <thead>
-      <tr><th>Fecha y hora</th><th>Nivel</th><th>Módulo</th><th>Evento</th><th>Mensaje</th><th>Usuario</th><th>Ejecución</th></tr>
+      <tr><th>Fecha y hora</th><th>Nivel</th><th>Módulo</th><th>Evento</th><th>Mensaje</th><th>Usuario</th>{% if not sin_columna_ejecucion %}<th>Ejecución</th>{% endif %}</tr>
     </thead>
     <tbody>
       {% for e in eventos %}
@@ -20,14 +22,17 @@
             {%- if e.traza %}<details class="log-detalle"><summary class="text-danger">Traza</summary><div class="log-traza">{{ e.traza }}</div></details>{% endif %}
           </td>
           <td class="small">{{ e.usuario or "—" }}</td>
+          {% if not sin_columna_ejecucion %}
           <td>
+            {#- Una ejecución tiene un solo destino en todo el hub: su detalle (que ya muestra sus eventos). #}
             {% if e.ejecucion_id %}
-              <a class="font-monospace small" href="{{ url_for('admin.logs', ejecucion_id=e.ejecucion_id, dias=31) }}" title="Ver todos los eventos de esta ejecución">{{ e.ejecucion_id[:8] }}</a>
+              <a class="font-monospace small" href="{{ url_for('admin.ejecucion_detalle', ejecucion_id=e.ejecucion_id) }}" title="Ver la ejecución y sus eventos">{{ e.ejecucion_id[:8] }}</a>
             {% else %}—{% endif %}
           </td>
+          {% endif %}
         </tr>
       {% else %}
-        <tr><td colspan="7" class="text-center text-secondary py-4">No hay eventos con esos filtros.</td></tr>
+        <tr><td colspan="{{ 6 if sin_columna_ejecucion else 7 }}" class="text-center text-secondary py-4">{{ mensaje_vacio or "No hay eventos con esos filtros." }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
