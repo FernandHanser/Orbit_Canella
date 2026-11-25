@@ -235,12 +235,17 @@ proyectos (skill `caddy-deploy`). Lo propio de ORBIT está en
 [`scripts/despliegue.psd1`](../scripts/despliegue.psd1).
 
 ```
-Navegador ──HTTPS 8443──▶ Caddy compartido (C:\Caddy) ──HTTP 127.0.0.1:8001──▶ Waitress (servicio ORBIT)
+Navegador ──HTTPS 8443──▶ Caddy compartido (C:\Caddy) ──HTTP 127.0.0.1:8000──▶ Waitress (servicio ORBIT)
 ```
+
+**Puertos y Python se eligen solos.** Los puertos preferidos son 8000 (interno) y 8443
+(público). Si alguno está ocupado, el instalador toma el siguiente libre y lo anota en
+`C:\Caddy\sitios\orbit.caddy`, de donde lo lee `actualizar.ps1`. De Python usa el más nuevo
+que cumpla 3.11, no el del PATH, que en el .70 es 3.10. Si el `.venv` tiene uno viejo, lo rehace.
 
 ### Primera vez
 
-En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «Add to PATH»),
+En el servidor tienen que estar **Python 3.11 o más nuevo** (mejor 3.13, para todos los usuarios),
 **Git for Windows** y el **ODBC Driver 17 o 18 for SQL Server**.
 
 1. Copia a una misma carpeta del servidor (p. ej. el escritorio, por escritorio remoto)
@@ -253,18 +258,17 @@ En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «
 
 3. Cuando muestre la llave, pégala en GitHub: *Orbit_Canella → Settings → Deploy keys → Add deploy
    key*, **sin** marcar *Allow write access*. Luego presiona Enter.
-4. Al terminar, entra a `https://128.1.200.70:8443` con tu usuario de STOD. El navegador avisará
-   del certificado: en pruebas se acepta. Para quitar el aviso en un equipo, se instala
+4. Al terminar, entra a la URL que imprime (`https://128.1.200.70:8443`) con tu usuario de STOD.
+   El navegador avisará del certificado: en pruebas se acepta. Para quitar el aviso en un equipo, se instala
    `C:\Caddy\datos\pki\authorities\local\root.crt` en sus *Entidades de certificación raíz de
    confianza*.
 
 Si algo falla, el script dice en qué paso. Se corrige y se vuelve a correr: salta lo que ya esté
 hecho.
 
-**Qué hace:** revisa que los puertos 8001 y 8443 estén libres (el 8000 ya
-está ocupado en ese servidor), clona `dev` en `C:\ORBIT`, crea el
+**Qué hace:** elige puertos y Python, clona `dev` en `C:\ORBIT`, crea el
 `.venv` e instala dependencias. Copia el `.env` y le cambia solo lo de `Env` en
-`despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8001`,
+`despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=<interno elegido>`,
 `PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1`, `LOG_DIR` vacío y
 `CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes e
 instala el servicio `ORBIT`. Si falta, instala el Caddy compartido (servicio `Caddy`). Luego

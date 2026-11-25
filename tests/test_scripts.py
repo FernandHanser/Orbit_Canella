@@ -33,8 +33,10 @@ def test_instala_todos_los_requirements():
     assert not faltan, f"despliegue.psd1 no instala: {faltan}"
 
 
-def test_el_puerto_del_env_es_el_interno():
-    assert _valor("PORT") == _valor("PuertoInterno")
+def test_el_puerto_interno_lo_pone_el_instalador():
+    """El puerto puede cambiar en el servidor (si está ocupado): no se fija en Env, lo pone EnvPuerto."""
+    assert _valor("EnvPuerto") == "PORT"
+    assert not re.search(r"^\s*PORT\s*=", CONFIG, re.MULTILINE)
     assert _valor("HOST") == "127.0.0.1"
 
 

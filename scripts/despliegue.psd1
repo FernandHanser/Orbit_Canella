@@ -7,9 +7,12 @@
     Rama          = 'dev'
     Carpeta       = 'C:\ORBIT'
 
-    PuertoInterno = 8001   # el 8000 ya lo usa otro programa en el .70
+    # Preferidos: si están ocupados, instalar_pruebas.ps1 toma el siguiente libre y lo anota en
+    # el sitio de Caddy (en el .70 el 8000 está ocupado: queda en 8001)
+    PuertoInterno = 8000
     PuertoPublico = 8443
 
+    PythonMinimo  = '3.11'   # el instalador busca el más nuevo que cumpla (en el .70 el del PATH es 3.10)
     Arranque      = 'serve.py'
     Salud         = '/salud'
     Requisitos    = @('requirements.txt', 'requirements-corte_caja.txt', 'requirements-expedientes_seguros.txt')
@@ -19,10 +22,10 @@
     # .env: el del equipo de desarrollo (misma base de datos), con estos valores para el servidor
     EnvObligatorias = @('DATABASE_URL')
     EnvSecreto      = 'SECRET_KEY'
+    EnvPuerto       = 'PORT'          # el script le pone el puerto interno elegido
     Env = @{
         AUTOMATE_ENV          = 'production'
         HOST                  = '127.0.0.1'   # Waitress solo para Caddy
-        PORT                  = '8001'        # igual a PuertoInterno
         PROXY_CONFIABLE       = '127.0.0.1'   # IP real del usuario detrás de Caddy
         SESSION_COOKIE_SECURE = '1'
         LOG_DIR               = ''            # la ruta del equipo no existe aquí: logs\ del hub

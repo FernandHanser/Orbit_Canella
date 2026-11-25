@@ -10,9 +10,11 @@
     No necesita el repositorio: se copian a una misma carpeta del servidor este archivo,
     despliegue.psd1 y el .env del equipo de desarrollo, y se ejecuta desde ahí.
 
-      1. Revisa requisitos y que los puertos del proyecto estén libres.
+      1. Revisa requisitos y elige puertos: los de despliegue.psd1 o, si están ocupados, el
+         siguiente libre (en una segunda corrida, los mismos que ya tenía).
       2. Crea la llave de solo lectura para GitHub (deploy key) y espera a que la pegues.
-      3. Clona la rama, crea el .venv e instala dependencias.
+      3. Clona la rama, crea el .venv con el Python más nuevo que cumpla PythonMinimo (no el del
+         PATH) e instala dependencias. Un .venv con un Python viejo se rehace.
       4. Copia el .env y le aplica los valores del servidor (Env en despliegue.psd1).
       5. Aplica migraciones, si el proyecto tiene.
       6. Instala el proyecto como servicio de Windows (NSSM), escuchando solo en 127.0.0.1.
@@ -65,10 +67,6 @@ function Get-Descarga([string]$url, [string]$destino) {
     Invoke-WebRequest @opciones
 }
 
-function Test-Puerto([int]$puerto) {
-    [bool](Get-NetTCPConnection -LocalPort $puerto -State Listen -ErrorAction SilentlyContinue)
-}
-
 # Reemplaza la línea CLAVE=... (sin comentar) o la agrega al final.
 function Set-ValorEnv([System.Collections.Generic.List[string]]$lineas, [string]$clave, [string]$valor) {
     $patron = "^\s*$([regex]::Escape($clave))\s*="
@@ -103,11 +101,44 @@ function Install-Servicio([string]$nombre, [string]$programa, [string]$argumento
     Write-Hecho "Servicio $nombre en marcha."
 }
 
-function Wait-Salud([string]$url) {
+function Test-Salud([string]$url) {
     for ($i = 0; $i -lt 15; $i++) {
-        try { if ((Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200) { return } } catch { Start-Sleep -Seconds 2 }
+        try { if ((Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200) { return $true } } catch { Start-Sleep -Seconds 2 }
     }
-    throw "No responde $url. Revisar $Carpeta\logs\servicio.log y $Caddy\logs\caddy.log"
+    return $false
+}
+
+# Versión "3.13" de un python.exe, o $null si no corre.
+function Get-VersionPython([string]$exe) {
+    try {
+        $anterior = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        $v = & $exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $v -match '^\d+\.\d+$') { return [version]$v }
+    } catch { } finally { $ErrorActionPreference = $anterior }
+    return $null
+}
+
+# El python del PATH puede ser viejo (en el .70 es 3.10): se busca el más nuevo que cumpla el mínimo
+# entre el lanzador py, el PATH y las carpetas de instalación habituales.
+function Find-Python([version]$minimo) {
+    $candidatos = [System.Collections.Generic.List[string]]::new()
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        $anterior = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        foreach ($linea in (py -0p 2>$null)) { if ($linea -match '([A-Za-z]:\\.*python\.exe)\s*$') { $candidatos.Add($Matches[1]) } }
+        $ErrorActionPreference = $anterior
+    }
+    Get-Command python -All -ErrorAction SilentlyContinue | Where-Object { $_.Source -notmatch 'WindowsApps' } | ForEach-Object { $candidatos.Add($_.Source) }
+    foreach ($patron in "$env:ProgramFiles\Python3*\python.exe", "C:\Python3*\python.exe",
+                        "$env:LOCALAPPDATA\Programs\Python\*\python.exe", "$env:LOCALAPPDATA\Programs\Python\*\tools\python.exe") {
+        Get-ChildItem $patron -ErrorAction SilentlyContinue | ForEach-Object { $candidatos.Add($_.FullName) }
+    }
+    $mejor = $null; $mejorVersion = $null
+    foreach ($exe in ($candidatos | Select-Object -Unique)) {
+        $v = Get-VersionPython $exe
+        if ($v -and $v -ge $minimo -and (-not $mejorVersion -or $v -gt $mejorVersion)) { $mejor = $exe; $mejorVersion = $v }
+    }
+    if (-not $mejor) { throw "No hay Python $minimo o más nuevo. Instalar Python 3.13 de python.org (para todos los usuarios)." }
+    return $mejor
 }
 
 # ------------------------------------------------------------------ 1. Requisitos
@@ -116,27 +147,52 @@ $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $admin) { throw "Abrir PowerShell como administrador." }
 if ($Carpeta -match "\s") { throw "La carpeta no debe tener espacios: $Carpeta" }
-foreach ($programa in "python", "git", "ssh-keygen") {
-    if (-not (Get-Command $programa -ErrorAction SilentlyContinue)) {
-        throw "Falta '$programa' en el PATH. Python 3 (para todos los usuarios, con 'Add to PATH') y Git for Windows."
-    }
+foreach ($programa in "git", "ssh-keygen") {
+    if (-not (Get-Command $programa -ErrorAction SilentlyContinue)) { throw "Falta '$programa' en el PATH: instalar Git for Windows." }
 }
 if ($P.RequiereOdbc -and -not (Get-OdbcDriver -Platform 64-bit | Where-Object { $_.Name -like "ODBC Driver 1* for SQL Server" })) {
     throw "Falta el ODBC Driver 17 o 18 for SQL Server (64 bits)."
 }
 if ($Proxy) { $env:HTTP_PROXY = $Proxy; $env:HTTPS_PROXY = $Proxy }  # para pip
-Write-Hecho (python --version)
+$pythonMinimo = [version]$(if ($P.PythonMinimo) { $P.PythonMinimo } else { "3.11" })
+$pythonBase = Find-Python $pythonMinimo
+Write-Hecho "Python $(Get-VersionPython $pythonBase): $pythonBase"
 
-# Un puerto ocupado solo se acepta si es de este mismo proyecto (segunda corrida).
-$yaInstalado = [bool](Get-Service $Nombre -ErrorAction SilentlyContinue)
-if (-not $yaInstalado -and (Test-Puerto $P.PuertoInterno)) {
-    throw "El puerto interno $($P.PuertoInterno) ya lo usa otro programa. Elegir otro en despliegue.psd1."
-}
+# Puertos: los de despliegue.psd1 son preferidos. Si están ocupados se toma el siguiente libre;
+# en una segunda corrida se repiten los que ya tenía. Quedan anotados en el sitio de Caddy, que
+# es de donde los lee actualizar.ps1.
+if (Get-Service $Nombre -ErrorAction SilentlyContinue) { Stop-Service $Nombre }  # libera su puerto
 $sitio = Join-Path $Caddy "sitios\$id.caddy"
-$otros = Get-ChildItem (Join-Path $Caddy "sitios") -Filter *.caddy -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -ne $sitio -and (Select-String -Path $_.FullName -Pattern ":$($P.PuertoPublico)\b|127\.0\.0\.1:$($P.PuertoInterno)\b" -Quiet) }
-if ($otros) { throw "El puerto $($P.PuertoPublico) o $($P.PuertoInterno) ya lo tiene otro proyecto: $($otros.Name -join ', ')" }
-Write-Hecho "Puertos: público $($P.PuertoPublico), interno $($P.PuertoInterno)."
+$internoPreferido = [int]$P.PuertoInterno
+$publicoPreferido = [int]$P.PuertoPublico
+if (Test-Path $sitio) {
+    $texto = Get-Content $sitio -Raw
+    if ($texto -match ':(\d+)\s*\{') { $publicoPreferido = [int]$Matches[1] }
+    if ($texto -match 'reverse_proxy 127\.0\.0\.1:(\d+)') { $internoPreferido = [int]$Matches[1] }
+}
+# Puertos de otros proyectos en Caddy (aunque su servicio esté detenido), 80/443 y la administración de Caddy.
+$reservados = [System.Collections.Generic.List[int]]@(80, 443, 2019)
+Get-ChildItem (Join-Path $Caddy "sitios") -Filter *.caddy -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne "$id.caddy" } |
+    ForEach-Object { foreach ($m in [regex]::Matches((Get-Content $_.FullName -Raw), ':(\d{2,5})\b')) { $reservados.Add([int]$m.Groups[1].Value) } }
+
+function Find-PuertoLibre([int]$desde, [string]$procesoPermitido) {
+    for ($puerto = $desde; $puerto -lt $desde + 100; $puerto++) {
+        if ($reservados.Contains($puerto)) { continue }
+        $conexion = Get-NetTCPConnection -LocalPort $puerto -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $conexion) { return $puerto }
+        $proceso = (Get-Process -Id $conexion.OwningProcess -ErrorAction SilentlyContinue).ProcessName
+        if ($procesoPermitido -and $proceso -eq $procesoPermitido) { return $puerto }
+    }
+    throw "No hay puerto libre entre $desde y $($desde + 99)."
+}
+$interno = Find-PuertoLibre $internoPreferido ""
+$reservados.Add($interno)
+$publico = Find-PuertoLibre $publicoPreferido "caddy"  # Caddy ya escucha en el de este sitio
+Write-Hecho "Puertos: público $publico, interno $interno."
+if ($interno -ne $P.PuertoInterno -or $publico -ne $P.PuertoPublico) {
+    Write-Hecho "(preferidos $($P.PuertoPublico)/$($P.PuertoInterno) ocupados o ya asignados antes)"
+}
 
 $envOrigen = Join-Path $PSScriptRoot ".env"
 $envDestino = Join-Path $Carpeta ".env"
@@ -173,10 +229,13 @@ if (-not (Test-Path (Join-Path $Carpeta ".git"))) {
 Set-Location $Carpeta
 git config core.sshCommand $sshCommand; Assert-Salida "git config"  # actualizar.ps1 usa la misma llave
 
-# Windows no deja reemplazar paquetes de Python en uso.
-if ($yaInstalado) { Stop-Service $Nombre }
 $python = Join-Path $Carpeta ".venv\Scripts\python.exe"
-if (-not (Test-Path $python)) { python -m venv .venv; Assert-Salida "python -m venv" }
+if ((Test-Path $python) -and -not ((Get-VersionPython $python) -ge $pythonMinimo)) {
+    Write-Hecho "El .venv tiene un Python viejo o roto: se rehace."
+    Remove-Item (Join-Path $Carpeta ".venv") -Recurse -Force
+}
+if (-not (Test-Path $python)) { & $pythonBase -m venv .venv; Assert-Salida "python -m venv" }
+Write-Hecho "Entorno: Python $(Get-VersionPython $python)"
 if ($P.Requisitos) {
     $argsPip = @("-m", "pip", "install", "--disable-pip-version-check", "-q")
     foreach ($archivo in $P.Requisitos) { $argsPip += @("-r", $archivo) }
@@ -200,6 +259,7 @@ if ($P.Env) {
         Set-ValorEnv $lineas $P.EnvSecreto (& $python -c "import secrets; print(secrets.token_hex(32))")
     }
     foreach ($clave in $P.Env.Keys) { Set-ValorEnv $lineas $clave ([string]$P.Env[$clave]) }
+    if ($P.EnvPuerto) { Set-ValorEnv $lineas $P.EnvPuerto "$interno" }
     [IO.File]::WriteAllLines($envDestino, $lineas, (New-Object Text.UTF8Encoding($false)))
     icacls $envDestino /inheritance:r /grant:r "*S-1-5-32-544:F" "*S-1-5-18:R" | Out-Null  # Administradores y SYSTEM
     Assert-Salida "icacls .env"
@@ -250,14 +310,18 @@ Write-Hecho (& $caddyExe version)
 
 # ------------------------------------------------------------------ 7. Servicio del proyecto y sitio
 Write-Paso "Servicio $Nombre"
-Install-Servicio $Nombre $python $P.Arranque $Carpeta (Join-Path $Carpeta "logs\servicio.log")
-Wait-Salud "http://127.0.0.1:$($P.PuertoInterno)$($P.Salud)"
+# {puerto} en Arranque, para proyectos que reciben el puerto como argumento y no por el .env
+Install-Servicio $Nombre $python ($P.Arranque -replace '\{puerto\}', "$interno") $Carpeta (Join-Path $Carpeta "logs\servicio.log")
+if (-not (Test-Salud "http://127.0.0.1:$interno$($P.Salud)")) {
+    throw "$Nombre no responde en http://127.0.0.1:$interno$($P.Salud). Revisar $Carpeta\logs\servicio.log"
+}
+Write-Hecho "Responde en 127.0.0.1:$interno."
 
-Write-Paso "Sitio https://${Direccion}:$($P.PuertoPublico)"
+Write-Paso "Sitio https://${Direccion}:$publico"
 @"
-https://${Direccion}:$($P.PuertoPublico) {
+https://${Direccion}:$publico {
 	tls internal
-	reverse_proxy 127.0.0.1:$($P.PuertoInterno)
+	reverse_proxy 127.0.0.1:$interno
 }
 "@ | Set-Content $sitio -Encoding ASCII
 if (-not (Test-Comando { & $caddyExe validate --config $caddyfile --adapter caddyfile })) {
@@ -275,17 +339,28 @@ if (Get-Service "Caddy" -ErrorAction SilentlyContinue) {
 # ------------------------------------------------------------------ 8. Firewall y verificación
 Write-Paso "Firewall"
 $regla = "$Nombre pruebas"
-if (-not (Get-NetFirewallRule -DisplayName $regla -ErrorAction SilentlyContinue)) {
-    New-NetFirewallRule -DisplayName $regla -Direction Inbound -Protocol TCP -LocalPort $P.PuertoPublico -Action Allow | Out-Null
-}
-Write-Hecho "Abierto el $($P.PuertoPublico); el $($P.PuertoInterno) sigue cerrado."
+Remove-NetFirewallRule -DisplayName $regla -ErrorAction SilentlyContinue  # por si cambió el puerto
+New-NetFirewallRule -DisplayName $regla -Direction Inbound -Protocol TCP -LocalPort $publico -Action Allow | Out-Null
+Write-Hecho "Abierto el $publico; el $interno sigue cerrado."
 
-Write-Paso "Comprobar"
-# El certificado es interno de Caddy: aquí no se valida, solo que responda.
-[Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-$url = "https://${Direccion}:$($P.PuertoPublico)"
-Wait-Salud "$url$($P.Salud)"
-Write-Hecho "$url$($P.Salud) OK"
+Write-Paso "Comprobar HTTPS"
+# El certificado es interno de Caddy: no se valida (-k). curl.exe viene con Windows 10/Server 2019;
+# PowerShell 5.1 falla con certificados no confiables aunque se le diga que los acepte.
+$url = "https://${Direccion}:$publico"
+$https = $false
+if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+    for ($i = 0; $i -lt 10 -and -not $https; $i++) {
+        $codigo = & curl.exe -sk -o NUL -w "%{http_code}" --max-time 5 "$url$($P.Salud)" 2>$null
+        if ($codigo -eq "200") { $https = $true } else { Start-Sleep -Seconds 2 }
+    }
+}
+if ($https) {
+    Write-Hecho "$url$($P.Salud) OK"
+} else {
+    # No es fatal: el proyecto ya respondió por dentro y Caddy está en marcha. Desde el mismo
+    # servidor a veces no se llega a su propia IP; lo que vale es entrar desde otro equipo.
+    Write-Warning "No se pudo comprobar $url desde este servidor. Abrirlo desde otro equipo; si no entra, revisar $Caddy\logs\caddy.log"
+}
 
 Write-Host "`nListo: $url" -ForegroundColor Green
 Write-Host "El navegador avisará del certificado. Para quitar el aviso en un equipo, instalar"
