@@ -5,7 +5,8 @@
   * Cuenta hacia atrás con los segundos que envía el servidor (data-sesion-* en <body>).
   * A SESION_AVISO_SEGUNDOS del final abre el modal con la cuenta regresiva:
       - por inactividad: «Extender sesión» (POST /sesion/extender) o «Cerrar sesión»;
-      - por jornada: solo «Entendido» (la jornada no se extiende; hay que volver a entrar).
+      - por jornada: solo «Entendido» (la jornada no se extiende; hay que volver a entrar). Cierra
+        el aviso hasta el final y deja a la vista una cuenta pequeña (.sesion-cuenta-mini).
   * Antes de mostrarlo pregunta al servidor el tiempo real (/sesion/estado), porque otras
     pestañas o las imágenes de un visor también cuentan como actividad.
   * Pestañas sincronizadas con localStorage: extender o navegar en una reinicia el aviso en las demás.
@@ -26,6 +27,8 @@
   var urlAcceso = cuerpo.getAttribute("data-sesion-acceso");
   var csrf = cuerpo.getAttribute("data-csrf");
   var vence = 0, motivo = "inactividad", consultando = false, instancia = null;
+  var descartado = false;   // «Entendido» en el aviso de jornada: no se vuelve a abrir
+  var mini = document.querySelector("[data-sesion-mini]");
 
   function guardar(segundos, nuevoMotivo) {
     vence = Date.now() + segundos * 1000;
@@ -61,6 +64,12 @@
     if (instancia && modal.classList.contains("show")) instancia.hide();
   }
 
+  function entendido() {
+    descartado = true;
+    ocultar();
+    if (mini) mini.classList.remove("d-none");
+  }
+
   function consultar() {
     consultando = true;
     return fetch(urlEstado, { credentials: "same-origin", headers: { "Accept": "application/json" } })
@@ -87,13 +96,17 @@
     var falta = vence - Date.now();
     if (falta <= 0) { salir(); return; }
     if (falta <= aviso) {
-      if (!consultando && !(modal && modal.classList.contains("show"))) {
+      if (!descartado && !consultando && !(modal && modal.classList.contains("show"))) {
         // Confirmar con el servidor antes de interrumpir: puede haber actividad en otra pestaña.
         consultar().then(function () { if (vence - Date.now() <= aviso) mostrar(); });
       }
       var cuenta = modal && modal.querySelector("[data-sesion-cuenta]");
       if (cuenta) cuenta.textContent = formato(falta);
+      var cuentaMini = mini && mini.querySelector("[data-sesion-cuenta-mini]");
+      if (cuentaMini) cuentaMini.textContent = formato(falta);
     } else {
+      descartado = false;
+      if (mini) mini.classList.add("d-none");
       ocultar();
     }
   }
@@ -106,7 +119,7 @@
 
   if (modal) {
     modal.querySelector("[data-sesion-extender]").addEventListener("click", extender);
-    modal.querySelector("[data-sesion-entendido]").addEventListener("click", ocultar);
+    modal.querySelector("[data-sesion-entendido]").addEventListener("click", entendido);
   }
   guardar(parseInt(cuerpo.getAttribute("data-sesion-segundos"), 10), cuerpo.getAttribute("data-sesion-motivo"));
   setInterval(tic, 1000);

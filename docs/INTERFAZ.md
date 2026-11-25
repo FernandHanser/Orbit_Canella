@@ -45,7 +45,7 @@ todo el ancho. Queda un ícono fijo arriba a la izquierda para mostrarlo de nuev
 
 | Macro | Qué dibuja |
 |---|---|
-| `encabezado(titulo, pretitulo)` | Encabezado de página. Con botones a la derecha: `{% call encabezado("Título") %}<a class="btn">…</a>{% endcall %}` |
+| `encabezado(titulo, pretitulo, pretitulo_url=None)` | Encabezado de página. Con botones a la derecha: `{% call encabezado("Título") %}<a class="btn">…</a>{% endcall %}`. Con `pretitulo_url`, el pretítulo (el nivel de arriba, p. ej. la lista) es un enlace a él |
 | `campo(form.campo, ayuda=None, autocomplete=None, autofocus=False, revelar=False)` | Campo de formulario WTForms con etiqueta, errores y ayuda. Con `revelar=True` (contraseñas) agrega el botón del ojo para mostrar lo escrito (`data-revelar-contrasena`, ver abajo). Los validadores llevan siempre su mensaje en español (`DataRequired(message=…)`): sin él, WTForms responde en inglés |
 | `interruptor(form.campo_booleano, ayuda=None)` | Casilla tipo switch |
 | `estado_ejecucion(estado)` | Etiqueta de color para `exito`, `advertencia`, `error`, `en_curso` |
@@ -105,7 +105,7 @@ cargado en toda pantalla con sesión). Ningún módulo tiene que hacer nada.
 |---|---|
 | **Inactividad** | `SESION_INACTIVIDAD_MINUTOS` (60) sin peticiones cierra la sesión. Cada petición la renueva, salvo la consulta del aviso |
 | **Jornada máxima** | `SESION_MAXIMA_HORAS` (10) desde el inicio de sesión, aunque haya actividad: obliga a validar de nuevo con STOD |
-| **Aviso previo** | A `SESION_AVISO_SEGUNDOS` (120) del final: modal con cuenta regresiva, **Extender sesión** y **Cerrar sesión**. Si vence la jornada no se puede extender: solo **Entendido** |
+| **Aviso previo** | A `SESION_AVISO_SEGUNDOS` (120) del final: modal con cuenta regresiva, **Extender sesión** y **Cerrar sesión**. Si vence la jornada no se puede extender: solo **Entendido**, que cierra el aviso hasta el final y deja una cuenta pequeña abajo a la derecha (`.sesion-cuenta-mini`) para guardar con calma. La cuenta del modal no lleva `aria-live` (se anunciaría cada segundo) |
 | **Varias pestañas** | Sincronizadas: extender o navegar en una actualiza el aviso de las demás. Antes de mostrarlo se consulta al servidor el tiempo real |
 | **Al vencer** | Login con `?motivo=inactividad` / `jornada` / `stod` / `formulario` y un mensaje claro, y `?siguiente=` para volver a la misma página |
 | **Formulario enviado con la sesión vencida** | Lleva al login con el motivo, no a un «400 Bad Request» |
@@ -305,3 +305,49 @@ Expedientes. Solo va donde el dato viene de SAP, no como adorno.
 
 Pruebas: `tests/test_logs_ejecuciones.py` (sección auditoría Krug) y
 `tests/test_interfaz.py::test_administracion_no_remite_a_archivos_del_codigo`.
+
+
+## Tablas: reglas de la plantilla del hub
+
+Valen para toda tabla del hub (administración hoy; los módulos, cuando se revisen). Salen de la
+auditoría Krug del 25/11/2026 de Inicio y Administración, vista a media pantalla (767 px).
+
+| Regla | Cómo se aplica | Por qué |
+|---|---|---|
+| **La acción de cada fila nunca queda fuera de la vista** | Clase `col-acciones` en el `<th>` y el `<td>` de la columna de botones: queda fija a la derecha cuando la tabla se desplaza de lado (CSS en `automate.css`). El `<th>` lleva `<span class="visually-hidden">Acciones</span>` | En una ventana angosta «Editar» quedaba a la derecha, fuera de pantalla: la única acción de la fila se encontraba por accidente |
+| **Lo que identifica la fila es lo que se pulsa** | Si la fila abre un detalle: `data-fila-enlace="<url>"` en el `<tr>` (toda la fila abre; Ctrl/clic central, en otra pestaña) **y** un `<a>` normal al mismo destino en la fila, en el dato que la identifica (el nombre de la persona). Los botones y enlaces de la fila siguen haciendo lo suyo | En Ejecuciones solo se podía pulsar un código (`7d905c14…`), lo menos significativo de la fila; en Usuarios, solo un botón al final |
+| **Lo que falló se ve sin entrar** | En listas de ejecuciones, la línea del error bajo su estado (`.ejecucion-error`, texto completo al pasar el mouse) | Había que abrir cada ejecución para saber por qué falló |
+| **Logs abre en lo útil** | Nivel mínimo **INFO** por defecto (`NIVEL_LOGS_POR_DEFECTO` en `app/core/admin.py`); el DEBUG sigue con «Todos» | Lo primero que se veía era el arranque del servidor y el registro de módulos |
+
+Inicio, en la misma auditoría:
+
+- Encabezado solo con el saludo («Hola, Ana»): el nombre del hub ya está en la marca del menú.
+- El nombre del módulo en la tarjeta se escribe igual que en el menú (sin mayúsculas forzadas):
+  regla «un módulo, un nombre».
+
+Pruebas: `tests/test_interfaz.py` y `tests/test_logs_ejecuciones.py` (secciones «auditoría Krug
+del 25/11/2026»).
+
+
+## Navegación y modales: reglas de la plantilla del hub
+
+Auditoría Krug y UI del 25/11/2026 sobre la navegación del hub y sus modales (menú, sesión y
+confirmación).
+
+| Regla | Cómo se aplica | Por qué |
+|---|---|---|
+| **«Volver» regresa a la lista como la dejaste** | Cada lista recuerda en la sesión su última dirección (filtros y página): `_recordar_lista()` y `url_volver()` en `app/core/admin.py`. «Volver», «Cancelar» y el pretítulo del detalle la usan. Solo acepta direcciones del propio hub y de esa lista | Al volver de una ejecución abierta desde «Error», la lista aparecía sin filtro y en la página 1 |
+| **El pretítulo es la miga de pan** | En un detalle, el pretítulo (la lista de arriba) es un enlace: `encabezado(..., pretitulo_url=…)` | Parecía una ruta y no se podía pulsar |
+| **Un objeto, un destino** | Una ejecución se abre siempre en su detalle, también desde Logs. Si ya no está registrada (las «sin cambios» antiguas se purgan), el detalle lleva a sus eventos en Logs con un aviso | Desde Ejecuciones iba al detalle y desde Logs a otra pantalla |
+| **Los mensajes vacíos dicen la verdad** | El detalle de una ejecución busca eventos desde el día en que empezó (hasta la retención, `LOG_RETENCION_DIAS`) y, si no quedan, lo dice: «Ya no hay eventos de esta ejecución: los logs se conservan N días». Sin la columna «Ejecución», que ahí sería siempre la misma | Decía «No hay eventos con esos filtros» sin haber filtros, y solo buscaba en el último mes |
+| **Al cerrar un modal, el foco vuelve a quien lo abrió** | `hub.confirmar` guarda el elemento enfocado al abrirse y lo enfoca al cerrarse (Esc, Cancelar o la X) | El foco caía al inicio de la página: quien usa teclado perdía su lugar |
+| **El aviso que se descarta no vuelve** | «Entendido» del fin de jornada cierra el aviso hasta el final (ver «Expiración de la sesión») | Se volvía a abrir al segundo: no dejaba guardar |
+| **Nombres cortados, completos al pasar el mouse** | `title` con el nombre del módulo en el menú | «Expedientes de Seguros (Tal…» no se podía leer completo |
+
+Lo que ya cumplía y no se toca: el modal de confirmación empieza en «Cancelar», dice qué hace su
+botón y se cierra con Esc o la X; el de sesión no se cierra con un clic fuera; el menú marca la
+sección también en los detalles; las páginas de error tienen salida al inicio.
+
+Pruebas: `tests/test_logs_ejecuciones.py` y `tests/test_interfaz.py` (secciones «navegación y
+modales»). El cierre del aviso de jornada y la vuelta del foco son JavaScript: se verificaron en
+el navegador simulando el reloj.

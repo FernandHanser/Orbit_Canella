@@ -137,11 +137,11 @@ def test_paginacion_de_ejecuciones_conserva_filtros(app, entrar_como, admin):
         ejecutar_tarea("ejemplo", "demo", proceso="prueba", parametros={"pasos": 0})
     c = entrar_como(admin)
     p1 = c.get("/admin/ejecuciones?modulo=ejemplo").get_data(as_text=True)
-    assert p1.count("/admin/ejecuciones/") == 15
+    assert p1.count('href="/admin/ejecuciones/') == 15
     assert "Mostrando <span>1</span>–<span>15</span>" in p1 and "de <span>30</span>" in p1
     assert "modulo=ejemplo&amp;pagina=2" in p1
     p2 = c.get("/admin/ejecuciones?modulo=ejemplo&pagina=2").get_data(as_text=True)
-    assert p2.count("/admin/ejecuciones/") == 15
+    assert p2.count('href="/admin/ejecuciones/') == 15
     fuera = c.get("/admin/ejecuciones?pagina=99")
     assert fuera.status_code == 200
 
@@ -431,3 +431,100 @@ def test_ejecuciones_y_logs_muestran_el_nombre_del_modulo_y_la_fecha_como_el_res
     logs = c.get("/admin/logs").get_data(as_text=True)
     assert re.search(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", logs) and not re.search(r"\d{4}-\d{2}-\d{2} \d{2}:", logs)
     assert 'title="core">Hub<' in logs
+
+
+# ---------------------------------------------------------------- auditoría Krug del 25/11/2026
+
+def test_ejecuciones_la_fila_abre_el_detalle_y_muestra_el_error(app, entrar_como, admin):
+    from app.extensions import db
+    e = Ejecucion(modulo_id="ejemplo", tarea="demo", proceso="prueba", estado="error",
+                  error="No se pudo leer el buzón: tiempo de espera agotado")
+    db.session.add(e)
+    db.session.commit()
+    html = entrar_como(admin).get("/admin/ejecuciones").get_data(as_text=True)
+    assert f'<tr data-fila-enlace="/admin/ejecuciones/{e.id}">' in html
+    assert f'href="/admin/ejecuciones/{e.id}"' in html   # enlace normal para teclado y lectores
+    assert "No se pudo leer el buzón: tiempo de espera agotado</div>" in html
+
+
+def test_logs_abre_sin_debug_y_todos_lo_incluye(app, entrar_como, admin):
+    get_logger("ejemplo").debug("detalle interno", extra={"evento": "prueba.debug"})
+    get_logger("ejemplo").info("algo que pasó", extra={"evento": "prueba.info"})
+    c = entrar_como(admin)
+    por_defecto = c.get("/admin/logs").get_data(as_text=True)
+    assert "prueba.info" in por_defecto and "prueba.debug" not in por_defecto
+    assert '<option value="INFO" selected>' in por_defecto
+    todos = c.get("/admin/logs?nivel=").get_data(as_text=True)
+    assert "prueba.debug" in todos and "prueba.info" in todos
+
+
+# ---------------------------------------------------------------- navegación y modales (25/11/2026)
+
+def _ejecucion_con_error(dias_atras=0):
+    from app.core.models import ahora_utc
+    from app.extensions import db
+    momento = ahora_utc() - timedelta(days=dias_atras)
+    e = Ejecucion(modulo_id="ejemplo", tarea="demo", proceso="prueba", estado="error", error="falló", inicio=momento, fin=momento)
+    db.session.add(e)
+    db.session.commit()
+    return e
+
+
+def test_volver_del_detalle_regresa_a_la_lista_filtrada(app, entrar_como, admin):
+    e = _ejecucion_con_error()
+    c = entrar_como(admin)
+    c.get("/admin/ejecuciones?estado=error&modulo=ejemplo")
+    html = c.get(f"/admin/ejecuciones/{e.id}").get_data(as_text=True)
+    assert html.count('href="/admin/ejecuciones?estado=error&amp;modulo=ejemplo"') == 2   # «Volver» y el pretítulo
+
+
+def test_volver_de_un_usuario_regresa_a_la_pagina_de_la_lista(entrar_como, admin, autorizado):
+    c = entrar_como(admin)
+    c.get("/admin/usuarios?pagina=1")
+    html = c.get(f"/admin/usuarios/{autorizado.id}").get_data(as_text=True)
+    assert html.count('href="/admin/usuarios?pagina=1"') == 3   # «Volver», pretítulo y «Cancelar»
+
+
+def test_volver_no_usa_direcciones_ajenas(app, entrar_como, admin):
+    e = _ejecucion_con_error()
+    c = entrar_como(admin)
+    with c.session_transaction() as s:
+        s["lista_ejecuciones"] = "//sitio-ajeno.example/admin/ejecuciones"
+    html = c.get(f"/admin/ejecuciones/{e.id}").get_data(as_text=True)
+    assert "sitio-ajeno" not in html and 'href="/admin/ejecuciones"' in html
+
+
+def test_detalle_sin_eventos_lo_dice_sin_hablar_de_filtros(app, entrar_como, admin):
+    e = _ejecucion_con_error()
+    html = entrar_como(admin).get(f"/admin/ejecuciones/{e.id}").get_data(as_text=True)
+    assert "Ya no hay eventos de esta ejecución: los logs se conservan" in html
+    assert "No hay eventos con esos filtros" not in html
+    assert "<th>Ejecución</th>" not in html   # todas las filas serían la misma
+
+
+def test_detalle_busca_eventos_desde_el_dia_de_la_ejecucion(app, entrar_como, admin):
+    import json
+    from datetime import date
+    app.config["LOG_RETENCION_DIAS"] = 90
+    e = _ejecucion_con_error(dias_atras=40)
+    dia = date.today() - timedelta(days=40)
+    evento = {"ts": f"{dia:%Y-%m-%d}T10:00:00.000-06:00", "nivel": "ERROR", "modulo": "ejemplo", "evento": "prueba.antigua",
+              "mensaje": "evento de hace 40 días", "usuario": None, "ejecucion_id": e.id}
+    archivo = Path(app.config["LOG_DIR"]) / f"automate-{dia:%Y-%m-%d}.jsonl"
+    archivo.write_text(json.dumps(evento) + "\n", encoding="utf-8")
+    html = entrar_como(admin).get(f"/admin/ejecuciones/{e.id}").get_data(as_text=True)
+    assert "evento de hace 40 días" in html
+
+
+def test_en_logs_la_ejecucion_lleva_a_su_detalle(app, entrar_como, autorizado, admin):
+    c_user = app.test_client()
+    entrar(c_user, autorizado.usuario_stod)
+    c_user.post("/m/ejemplo/ejecutar", data={"pasos": "1"})
+    e = Ejecucion.query.one()
+    html = entrar_como(admin).get("/admin/logs?modulo=ejemplo").get_data(as_text=True)
+    assert f'href="/admin/ejecuciones/{e.id}"' in html and "ejecucion_id=" not in html.split("<tbody>", 1)[1]
+
+
+def test_ejecucion_que_ya_no_existe_lleva_a_sus_eventos(entrar_como, admin):
+    r = entrar_como(admin).get("/admin/ejecuciones/abc123")
+    assert r.status_code == 302 and "/admin/logs?" in r.headers["Location"] and "ejecucion_id=abc123" in r.headers["Location"]

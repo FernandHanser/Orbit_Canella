@@ -21,6 +21,11 @@
                              campo>): alterna entre mostrar y ocultar lo escrito. Al enviar el
                              formulario se vuelve a ocultar. Lo arma la macro campo(..., revelar=True).
 
+  data-fila-enlace="<url>"    (en un <tr>): toda la fila abre esa dirección, no solo un enlace pequeño.
+                             Ctrl/Cmd + clic o clic central la abre en otra pestaña. Los enlaces,
+                             botones y campos de la fila siguen haciendo lo suyo. La fila debe tener
+                             además un <a> normal al mismo destino (para teclado y lectores).
+
   Desde JavaScript: window.hub.confirmar({titulo, mensaje, boton, peligro, devolverFoco, alConfirmar})
   abre el mismo modal.
 
@@ -113,6 +118,19 @@
     revelarContrasena(boton, boton.getAttribute("aria-pressed") !== "true");
   });
 
+  // Filas que abren su detalle (data-fila-enlace).
+  var INTERACTIVOS = "a, button, input, select, textarea, label, summary, details, [data-bs-toggle]";
+  function abrirFila(evento) {
+    var fila = evento.target.closest("tr[data-fila-enlace]");
+    if (!fila || evento.target.closest(INTERACTIVOS)) return;
+    if (window.getSelection && String(window.getSelection())) return; // estaba seleccionando texto para copiarlo
+    var url = fila.getAttribute("data-fila-enlace");
+    if (evento.button === 1 || evento.ctrlKey || evento.metaKey) window.open(url, "_blank", "noopener");
+    else if (evento.button === 0) window.location.href = url;
+  }
+  document.addEventListener("click", abrirFila);
+  document.addEventListener("auxclick", abrirFila);
+
   function mostrarCargando(form) {
     var texto = form.getAttribute("data-cargando");
     form.setAttribute("aria-busy", "true");
@@ -144,16 +162,19 @@
     modal.querySelector("[data-modal-icono]").className = "ti ti-alert-triangle mb-2 modal-confirmar-icono text-" + color;
 
     var instancia = Modal.getOrCreateInstance(modal);
+    var origen = document.activeElement;   // el botón que lo abrió: ahí vuelve el foco al cerrar
     // Foco en "Cancelar": un Enter accidental no ejecuta la acción.
     modal.addEventListener("shown.bs.modal", function () {
       var cancelar = modal.querySelector("[data-bs-dismiss=modal].btn");
       if (cancelar) cancelar.focus();
     }, { once: true });
-    if (opciones.devolverFoco) {
-      modal.addEventListener("hidden.bs.modal", function () {
-        if (document.querySelector(".modal.show")) opciones.devolverFoco.focus();
-      }, { once: true });
-    }
+    modal.addEventListener("hidden.bs.modal", function () {
+      if (document.querySelector(".modal.show")) {
+        if (opciones.devolverFoco) opciones.devolverFoco.focus();
+      } else if (origen && origen !== document.body && document.contains(origen)) {
+        origen.focus();
+      }
+    }, { once: true });
     aceptar.onclick = function () {
       instancia.hide();
       opciones.alConfirmar();

@@ -109,13 +109,14 @@
 {% endmacro %}
 
 {# origen: HTML que va primero, a la izquierda del título y el subtítulo (p. ej. origen_sap("grande")). #}
-{% macro encabezado(titulo, pretitulo=None, subtitulo=None, origen=None) %}
+{# pretitulo_url: el pretítulo es el nivel de arriba (p. ej. la lista) y se vuelve enlace a él. #}
+{% macro encabezado(titulo, pretitulo=None, subtitulo=None, origen=None, pretitulo_url=None) %}
   <div class="page-header d-print-none">
     <div class="container-xl">
       <div class="row g-2 align-items-center">
         {% if origen %}<div class="col-auto align-self-end encabezado-origen">{{ origen }}</div>{% endif %}
         <div class="col">
-          {% if pretitulo %}<div class="page-pretitle">{{ pretitulo }}</div>{% endif %}
+          {% if pretitulo %}<div class="page-pretitle">{% if pretitulo_url %}<a href="{{ pretitulo_url }}" class="text-reset">{{ pretitulo }}</a>{% else %}{{ pretitulo }}{% endif %}</div>{% endif %}
           <h2 class="page-title">{{ titulo }}</h2>
           {% if subtitulo %}<div class="page-subtitle">{{ subtitulo }}</div>{% endif %}
         </div>

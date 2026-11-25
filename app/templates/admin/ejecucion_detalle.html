@@ -2,8 +2,8 @@
 {% from "_macros.html" import encabezado, estado_ejecucion %}
 {% block titulo %}Ejecución {{ ejecucion.id[:8] }}{% endblock %}
 {% block encabezado %}
-  {% call encabezado("Ejecución " ~ ejecucion.id[:12] ~ "…", "Ejecuciones") %}
-    <a href="{{ url_for('admin.ejecuciones') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+  {% call encabezado("Ejecución " ~ ejecucion.id[:12] ~ "…", "Ejecuciones", pretitulo_url=url_volver("ejecuciones")) %}
+    <a href="{{ url_volver('ejecuciones') }}" class="btn"><i class="ti ti-arrow-left me-2"></i>Volver</a>
   {% endcall %}
 {% endblock %}
 {% block contenido %}
@@ -33,6 +33,8 @@
     <h3 class="card-title">Eventos de esta ejecución</h3>
     <div class="card-actions"><span class="text-secondary small">{{ eventos|length }} eventos</span></div>
   </div>
-  {% include "admin/_tabla_logs.html" %}
+  {% with mensaje_vacio="Ya no hay eventos de esta ejecución: los logs se conservan " ~ config.LOG_RETENCION_DIAS ~ " días.", sin_columna_ejecucion=True %}
+    {% include "admin/_tabla_logs.html" %}
+  {% endwith %}
 </div>
 {% endblock %}

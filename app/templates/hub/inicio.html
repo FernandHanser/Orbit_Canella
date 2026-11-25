@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% from "_macros.html" import encabezado %}
 {% block titulo %}Inicio{% endblock %}
-{% block encabezado %}{{ encabezado("Hola, " ~ current_user.primer_nombre, SUBTITULO_PRODUCTO) }}{% endblock %}
+{# Sin pretítulo: el nombre del hub ya está en la marca del menú. #}
+{% block encabezado %}{{ encabezado("Hola, " ~ current_user.primer_nombre) }}{% endblock %}
 {% block contenido %}
 {% if tarjetas %}
   {% set estados = {
@@ -20,7 +21,7 @@
               <span class="avatar icono-modulo bg-primary-lt flex-shrink-0" aria-hidden="true"><i class="ti ti-{{ d.icono }}"></i></span>
               <div>
                 <h3 class="card-title mb-1">
-                  {{ d.nombre|upper }}
+                  {{ d.nombre }}
                   {% if d.es_ejemplo %}<span class="badge bg-yellow-lt ms-1">Ejemplo</span>{% endif %}
                 </h3>
                 <div class="text-secondary small lh-sm">{{ d.descripcion }}</div>

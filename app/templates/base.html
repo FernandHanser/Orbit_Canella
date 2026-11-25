@@ -47,7 +47,7 @@
           <li class="nav-item menu-seccion"><span class="nav-link disabled text-uppercase small">Mis automatizaciones</span></li>
           {% for m in modulos_menu %}
             <li class="nav-item{% if bp_actual == m.definicion.id %} active{% endif %}">
-              <a class="nav-link" href="{{ url_for(m.definicion.endpoint_inicio) }}">
+              <a class="nav-link" href="{{ url_for(m.definicion.endpoint_inicio) }}" title="{{ m.definicion.nombre }}">
                 <span class="nav-link-icon"><i class="ti ti-{{ m.definicion.icono }}"></i></span>
                 <span class="nav-link-title">{{ m.definicion.nombre }}</span>
               </a>
@@ -130,7 +130,9 @@
       <div class="modal-body text-center py-4">
         <i class="ti ti-clock-exclamation text-warning mb-2" style="font-size: 2.5rem"></i>
         <h3 id="modal-sesion-titulo">Tu sesión está por vencer</h3>
-        <div class="display-6 fw-bold my-2 font-monospace" data-sesion-cuenta aria-live="polite">2:00</div>
+        {# Sin aria-live: cambia cada segundo y un lector de pantalla lo anunciaría sin parar; el
+           modal ya se anuncia al abrirse (aria-describedby). #}
+        <div class="display-6 fw-bold my-2 font-monospace" data-sesion-cuenta>2:00</div>
         <div class="text-secondary" id="modal-sesion-texto" data-sesion-texto></div>
       </div>
       <div class="modal-footer">
@@ -151,6 +153,11 @@
       </div>
     </div>
   </div>
+</div>
+
+{# Cuenta pequeña que queda a la vista cuando se cierra el aviso de fin de jornada con «Entendido». #}
+<div class="sesion-cuenta-mini d-none" data-sesion-mini>
+  <i class="ti ti-clock-exclamation" aria-hidden="true"></i> Tu sesión termina en <span class="font-monospace fw-bold" data-sesion-cuenta-mini>2:00</span>
 </div>
 
 {# Modal de confirmación compartido: lo abre static/js/interaccion.js para formularios con data-confirmar. #}

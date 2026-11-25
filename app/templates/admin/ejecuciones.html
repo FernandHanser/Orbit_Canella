@@ -37,12 +37,15 @@
       </thead>
       <tbody>
         {% for e in ejecuciones %}
-          <tr>
+          <tr data-fila-enlace="{{ url_for('admin.ejecucion_detalle', ejecucion_id=e.id) }}">
             <td class="celda-ts">{{ e.inicio|fecha("%d/%m/%Y %H:%M:%S") }}</td>
             <td><span title="{{ e.modulo_id }}">{{ nombres_modulos.get(e.modulo_id, e.modulo_id) }}</span></td>
             <td>{{ e.tarea or "—" }}</td>
             <td class="small">{{ e.iniciado_por }}</td>
-            <td>{{ estado_ejecucion(e.estado) }}</td>
+            <td>
+              {{ estado_ejecucion(e.estado) }}
+              {% if e.error %}<div class="ejecucion-error text-danger small text-truncate mt-1" title="{{ e.error }}">{{ e.error }}</div>{% endif %}
+            </td>
             <td class="small">{{ "%.2f s"|format(e.duracion_segundos) if e.duracion_segundos is not none else "—" }}</td>
             <td><a class="font-monospace small" href="{{ url_for('admin.ejecucion_detalle', ejecucion_id=e.id) }}">{{ e.id[:12] }}…</a></td>
           </tr>
