@@ -7,6 +7,27 @@ y los logs de las automatizaciones contables. Cada automatización es un **módu
 
 Los comandos de este documento son para **Git Bash** en Windows.
 
+## Ambientes
+
+| Ambiente | Dónde | Rama | Cómo se actualiza |
+|---|---|---|---|
+| Desarrollo | Tu equipo, http://127.0.0.1:5000 | `dev` | `flask --app wsgi run --debug` ([Arranque diario](#arranque-diario)) |
+| Pruebas | **https://128.1.200.70:8443** | `dev` | **Solo, en cada `git push origin dev`**: GitHub Actions corre las pruebas y, si pasan, despliega |
+| Producción | Pendiente (Windows Server + IIS + HTTPS) | `main` | Procedimiento listo en [DESPLIEGUE.md](docs/DESPLIEGUE.md) |
+
+Desarrollo y pruebas usan **la misma base** (`AUTOMATE_CANELLA` en 128.1.200.70): lo que se haga
+en una se ve en la otra. Cada despliegue queda en la pestaña **Actions** del repositorio, con su
+log. Detalle en [DESPLIEGUE.md](docs/DESPLIEGUE.md#ambiente-de-pruebas-12812002070-rama-dev-caddy).
+
+## Módulos
+
+| Módulo | Qué hace | Estado | Guía |
+|---|---|---|---|
+| Expedientes de Seguros (Taller) | Arma el paquete para Cobros con las páginas del expediente en SAP y envía el correo | Implementado. Fuera de producción, el correo va en modo prueba | [PLAN_EXPEDIENTES_SEGUROS.md](docs/PLAN_EXPEDIENTES_SEGUROS.md) |
+| Corte de caja diario | Archiva los cortes que llegan por correo y rechaza los que no cumplen | Implementado, en **modo simulación** hasta su paso a producción | [PLAN_INTEGRACION_CORTE_DE_CAJA.md](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) |
+| Módulo de ejemplo | Plantilla técnica para crear módulos; no procesa datos contables | Referencia | [AGREGAR_MODULO.md](docs/AGREGAR_MODULO.md) |
+| Contraseñas de pago | Integración del proyecto `Automatizacion_Contrasenas` | Diseñado, sin implementar | [PLAN_INTEGRACION_CONTRASENAS.md](docs/PLAN_INTEGRACION_CONTRASENAS.md) |
+
 ---
 
 ## Si eres nuevo en el proyecto
@@ -27,8 +48,9 @@ Lee en este orden (unos 30 minutos) y no hace falta más para empezar:
 | Cambiar pantallas | [INTERFAZ.md](docs/INTERFAZ.md) |
 | Escribir pruebas | [PRUEBAS.md](docs/PRUEBAS.md) |
 
-**Ramas:** se trabaja en `dev`; `main` es lo que está en producción. Antes de subir cambios,
-`python -m pytest` debe pasar completo (incluye las reglas de arquitectura).
+**Ramas:** se trabaja en `dev`; `main` es lo que irá a producción. Un push a `dev` despliega solo
+en el ambiente de pruebas, pero únicamente si `python -m pytest` pasa completo en GitHub (incluye
+las reglas de arquitectura). Conviene correrlo antes en tu equipo para no enterarte allá.
 
 ---
 
@@ -37,7 +59,7 @@ Lee en este orden (unos 30 minutos) y no hace falta más para empezar:
 Con el proyecto ya instalado (ver [Instalación](#instalación-primera-vez)):
 
 ```bash
-cd "/d/Backup_CLOUD/OneDrive - Canella, S.A/GitHub/Orbit_Canella"
+cd "<carpeta del repositorio>"     # donde lo clonaste, p. ej. ".../GitHub/Orbit_Canella"
 source .venv/Scripts/activate
 flask --app wsgi run --debug
 ```
@@ -199,7 +221,12 @@ app/
     └── vendor/           #   Tabler, Tabler Icons, Oxanium, three.js, thinking-orbs (locales,
                           #   versión fijada: ver vendor/README.md)
 migrations/               # Alembic (Flask-Migrate)
-scripts/sqlserver/        # creación de la base del hub en SQL Server
+scripts/
+├── sqlserver/            # creación de la base del hub en SQL Server
+├── despliegue.psd1       # datos de ORBIT para desplegar: servicio, puertos, requirements, .env
+├── instalar_pruebas.ps1  # instalación en el servidor de pruebas (una vez)
+└── actualizar.ps1        # actualización del servidor (la corre GitHub Actions en cada push)
+.github/workflows/        # despliegue-pruebas.yml: pruebas y despliegue a pruebas en cada push a dev
 docs/                     # guías (ver abajo)
 tests/                    # pruebas automáticas (pytest)
 wsgi.py                   # entrada para `flask --app wsgi` y servidores WSGI
@@ -221,7 +248,7 @@ serve.py                  # servidor Waitress para ambientes distintos a desarro
 | [Interfaz](docs/INTERFAZ.md) | Plantillas, macros, estáticos, login y reglas de la CSP |
 | [Logs centrales](docs/LOGS.md) | Cómo emitir y consultar logs identificados por módulo |
 | [Ejecuciones y tareas programadas](docs/EJECUCIONES.md) | Registrar corridas y ejecutarlas sin sesión web |
-| [Publicar en la red](docs/DESPLIEGUE.md) | Producción con IIS y HTTPS; pruebas en 128.1.200.70 con Caddy (`scripts/instalar_pruebas.ps1`); actualización con `scripts/actualizar.ps1` |
+| [Publicar en la red](docs/DESPLIEGUE.md) | Producción con IIS y HTTPS; pruebas en 128.1.200.70 con Caddy, despliegue automático con GitHub Actions y su runner, instalación y actualización manual |
 | [Plan de trabajo](docs/PLAN_DE_TRABAJO.md) | Fases, decisiones tomadas, login con STOD, seguridad urgente y orden |
 | [Expedientes de Seguros (Taller)](docs/PLAN_EXPEDIENTES_SEGUROS.md) | Módulo `expedientes_seguros`: datos en SAP, visor, paquete, correo y configuración |
 | [Corte de caja diario](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) | Módulo `corte_caja`: diseño, configuración, tarea programada y paso a producción |
@@ -250,6 +277,7 @@ Todos con el entorno activado (`source .venv/Scripts/activate`):
 | `flask --app wsgi db migrate -m "mensaje"` | Genera una migración tras cambiar modelos |
 | `flask --app wsgi db upgrade` | Aplica las migraciones pendientes |
 | `python -m pytest` | Corre todas las pruebas (ver [PRUEBAS.md](docs/PRUEBAS.md)) |
+| `git push origin dev` | Sube los cambios; GitHub Actions los prueba y los despliega en https://128.1.200.70:8443 |
 
 ---
 
@@ -278,7 +306,7 @@ Se lee de variables de entorno o del archivo `.env` (no versionado; plantilla en
 | `LOG_DIR`, `LOG_LEVEL`, `LOG_RETENCION_DIAS`, `LOG_CONSOLA`, `LOG_ARCHIVO` | ver [LOGS.md](docs/LOGS.md) | Logs |
 | `AUTOMATE_MODULOS` | todos | Lista de módulos a cargar, p. ej. `app.modulos.ejemplo` |
 | `HOST` / `PORT` / `HILOS` | 127.0.0.1 / 8000 / 8 | Solo para `serve.py` |
-| `PROXY_CONFIABLE` | — | IP del proxy (IIS) cuyas cabeceras `X-Forwarded-For/Proto` se aceptan; `127.0.0.1` si IIS está en el mismo servidor. Ver [DESPLIEGUE.md](docs/DESPLIEGUE.md) |
+| `PROXY_CONFIABLE` | — | IP del proxy (IIS en producción, Caddy en pruebas) cuyas cabeceras `X-Forwarded-For/Proto` se aceptan; `127.0.0.1` si está en el mismo servidor. Ver [DESPLIEGUE.md](docs/DESPLIEGUE.md) |
 
 ### Otros ambientes
 
@@ -287,8 +315,8 @@ AUTOMATE_ENV=production python serve.py      # Waitress, compatible con Windows
 ```
 
 En `production`, `SECRET_KEY` es obligatoria y la cookie de sesión es `Secure`, así que se
-necesita HTTPS (IIS como proxy inverso: paso a paso en [DESPLIEGUE.md](docs/DESPLIEGUE.md)). Para probar en HTTP local:
-`SESSION_COOKIE_SECURE=0`.
+necesita HTTPS delante: IIS en producción, Caddy en el servidor de pruebas (paso a paso en
+[DESPLIEGUE.md](docs/DESPLIEGUE.md)). Para probar en HTTP local: `SESSION_COOKIE_SECURE=0`.
 
 ---
 
@@ -313,10 +341,16 @@ necesita HTTPS (IIS como proxy inverso: paso a paso en [DESPLIEGUE.md](docs/DESP
 
 ## Decisiones pendientes
 
-- **Servidor de la base productiva**: los scripts para SQL Server están listos y probados
-  ([scripts/sqlserver/](scripts/sqlserver/README.md)); falta definir en qué servidor se crea.
-- **Servidor y HTTPS**: el procedimiento con Windows Server + IIS está listo ([DESPLIEGUE.md](docs/DESPLIEGUE.md));
-  falta que TI defina el servidor, el nombre DNS, el certificado y la cuenta de servicio.
+- **Base de producción**: hoy `AUTOMATE_CANELLA` en 128.1.200.70 la comparten desarrollo y
+  pruebas. Al pasar a producción hay que decidir si producción se queda con ella y desarrollo y
+  pruebas pasan a una base aparte ([scripts/sqlserver/](scripts/sqlserver/README.md)).
+- **Servidor de producción y HTTPS**: el procedimiento con Windows Server + IIS está listo
+  ([DESPLIEGUE.md](docs/DESPLIEGUE.md)). Falta que TI defina el servidor, el nombre DNS, el
+  certificado y la cuenta de servicio. El ambiente de pruebas ya funciona en 128.1.200.70.
+- **Repositorio en una organización de Canella**: hoy está en una cuenta personal de GitHub, con un
+  runner de GitHub Actions en un servidor de Canella. Hay que revisarlo con TI.
+- **Python en el servidor de pruebas**: el del PATH es 3.10 y el `.venv` usa un 3.13 instalado en
+  un perfil de usuario. Conviene instalar Python 3.13 para todos los usuarios.
 - **Autenticación corporativa**: si se integrará con Active Directory / Microsoft Entra ID; el
   login local está aislado en `core/auth.py`.
 - **Cola de tareas**: no se incluye; ver el punto de conexión en [EJECUCIONES.md](docs/EJECUCIONES.md).
