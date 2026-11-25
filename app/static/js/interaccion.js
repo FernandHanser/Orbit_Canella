@@ -17,6 +17,10 @@
                              leer un PDF). Opcionales: data-cargando-detalle="…" (segunda línea) y
                              data-cargando-logo="<url>" (p. ej. el logo de SAP).
 
+  data-revelar-contrasena     (en un <button> junto a un campo de contraseña, con aria-controls=<id del
+                             campo>): alterna entre mostrar y ocultar lo escrito. Al enviar el
+                             formulario se vuelve a ocultar. Lo arma la macro campo(..., revelar=True).
+
   Desde JavaScript: window.hub.confirmar({titulo, mensaje, boton, peligro, devolverFoco, alConfirmar})
   abre el mismo modal.
 
@@ -88,6 +92,25 @@
     enlace.textContent = "";
     enlace.appendChild(spinner(enlace.getAttribute("data-cargando")));
     mostrarPantalla(enlace);
+  });
+
+  // Mostrar u ocultar la contraseña (botón con el ojo).
+  function revelarContrasena(boton, mostrar) {
+    var campo = document.getElementById(boton.getAttribute("aria-controls"));
+    if (!campo) return;
+    campo.type = mostrar ? "text" : "password";
+    var texto = mostrar ? "Ocultar contraseña" : "Mostrar contraseña";
+    boton.setAttribute("aria-pressed", mostrar ? "true" : "false");
+    boton.setAttribute("aria-label", texto);
+    boton.title = texto;
+    var icono = boton.querySelector(".ti");
+    if (icono) icono.className = "ti " + (mostrar ? "ti-eye-off" : "ti-eye");
+  }
+
+  document.addEventListener("click", function (evento) {
+    var boton = evento.target.closest("[data-revelar-contrasena]");
+    if (!boton) return;
+    revelarContrasena(boton, boton.getAttribute("aria-pressed") !== "true");
   });
 
   function mostrarCargando(form) {
@@ -174,6 +197,8 @@
       evento.preventDefault(); // ya se envió: ignora clics repetidos
       return;
     }
+    // La contraseña nunca viaja ni queda en pantalla como texto visible.
+    form.querySelectorAll("[data-revelar-contrasena]").forEach(function (boton) { revelarContrasena(boton, false); });
     var condicion = form.getAttribute("data-confirmar-si");
     var requiereConfirmar = form.hasAttribute("data-confirmar") && (!condicion || form.querySelector(condicion));
     if (requiereConfirmar && !form.dataset.confirmado) {

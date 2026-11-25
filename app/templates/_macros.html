@@ -16,11 +16,23 @@
   {% endwith %}
 {% endmacro %}
 
-{% macro campo(f, ayuda=None, autocomplete=None, autofocus=False) %}
+{# revelar=True: campo de contraseña con botón (ojo) para mostrarla; lo activa interaccion.js. #}
+{% macro campo(f, ayuda=None, autocomplete=None, autofocus=False, revelar=False) %}
   <div class="mb-3">
     <label class="form-label{% if f.flags.required %} required{% endif %}" for="{{ f.id }}">{{ f.label.text }}</label>
+    {% if revelar %}
+    <div class="input-group input-group-flat">
+      {{ f(class_="form-control" ~ (" is-invalid" if f.errors else ""), autocomplete=autocomplete, autofocus=autofocus, **kwargs) }}
+      <span class="input-group-text">
+        <button type="button" class="btn-revelar link-secondary" data-revelar-contrasena aria-controls="{{ f.id }}"
+                aria-pressed="false" aria-label="Mostrar contraseña" title="Mostrar contraseña"><i class="ti ti-eye" aria-hidden="true"></i></button>
+      </span>
+    </div>
+    {% for e in f.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    {% else %}
     {{ f(class_="form-control" ~ (" is-invalid" if f.errors else ""), autocomplete=autocomplete, autofocus=autofocus, **kwargs) }}
     {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+    {% endif %}
     {% if ayuda %}<small class="form-hint">{{ ayuda }}</small>{% endif %}
   </div>
 {% endmacro %}

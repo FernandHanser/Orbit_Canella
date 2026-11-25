@@ -55,24 +55,13 @@
   filter: drop-shadow(0 1px 4px rgba(11, 94, 138, .15));
 }
 .acceso-nombre .resto-nombre { color: #1a2831; }
-/* Emblema Canella: orb de puntos (emblema-canella.js, con thinking-orbs) sobre el disco
-   azul de marca (#1a2831), con el logotipo en blanco encima (logo_canella_blanco.png). Respira y brilla por CSS puro desde que carga la página, sin depender
-   de nada más: si el orb arranca, el propio JS toma el control cuadro a cuadro (fija transform y
-   box-shadow, que pisan a esta animación); si no arranca (JavaScript desactivado, o si falla),
-   esta animación sigue sola. El emblema nunca se queda inmóvil. */
-@keyframes emblema-respirar { 0%, 100% { transform: scale(.97); } 50% { transform: scale(1.04); } }
-@keyframes emblema-brillo {
-  0%, 100% { box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .55), 0 0 16px 2px rgba(14, 143, 150, .22); }
-  50% { box-shadow: 0 17px 38px -8px rgba(0, 0, 0, .55), 0 0 38px 7px rgba(14, 143, 150, .48); }
-}
+/* Emblema Canella: disco azul de marca (#1a2831), fijo y sin sombra, con el orb de puntos
+   (emblema-canella.js, con thinking-orbs) dentro y el logotipo en blanco encima
+   (logo_canella_blanco.png). Lo único que se mueve son las partículas; si el orb no carga, queda
+   el disco con el logotipo. */
 .emblema {
   position: relative; display: inline-block; width: 120px; height: 120px; border-radius: 50%;
-  overflow: hidden; background: #1a2831; will-change: transform, box-shadow;
-  animation: emblema-respirar 4.2s ease-in-out infinite, emblema-brillo 4.2s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* Más despacio, no apagada: es un detalle pequeño de marca, no el contenido de la página. */
-  .emblema { animation-duration: 9s; }
+  overflow: hidden; background: #1a2831;
 }
 .emblema-esfera { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 /* Logotipo CANELLA: siempre encima del orb (y solo, sobre el disco liso, si el orb no carga). */
@@ -83,11 +72,12 @@
 }
 /* La imagen (bk_index.jpg) se asigna en base_publica.html para versionar su URL. */
 .fondo-acceso { background-color: #f4f5f7; }
-/* Profundidad del login, en dos efectos que se suman:
+/* Profundidad del login: solo se mueve el fondo; el frente (emblema, título y formulario) queda
+   quieto para no desplazar lo que la persona está por tocar. Dos efectos que se suman:
    1. Respiración (CSS, siempre): el fondo se acerca y aleja con dos periodos distintos
-      (24 s y 15 s) que se combinan sin repetirse igual, y el frente con el suyo (12 s).
+      (24 s y 15 s) que se combinan sin repetirse igual.
    2. Parallax con el mouse (static/js/parallax-acceso.js): el fondo se desplaza en sentido
-      contrario al cursor y el frente a favor, con la propiedad "translate" (no pisa el scale).
+      contrario al cursor, con la propiedad "translate" (no pisa el scale).
    Se desplaza la imagen dentro de .fondo-capa (que recorta): con la escala mínima combinada
    (1.03 × 1.03 ≈ 6 %) el desplazamiento de 24 px no muestra bordes en pantallas de escritorio. */
 .fondo-capa {
@@ -102,18 +92,24 @@
   animation: profundidad-media 15s cubic-bezier(.37, 0, .63, 1) infinite alternate;
 }
 .fondo-acceso > .page { position: relative; z-index: 1; background: transparent; }
-.fondo-acceso .container-tight {
-  animation: flotar-frente 12s cubic-bezier(.37, 0, .63, 1) infinite alternate;
-  will-change: transform, translate;
-}
 @keyframes profundidad-lenta { from { transform: scale(1.03); }  to { transform: scale(1.12); } }
 @keyframes profundidad-media { from { transform: scale(1.03); }  to { transform: scale(1.10); } }
-@keyframes flotar-frente     { from { transform: scale(1); }     to { transform: scale(1.025); } }
 @media (prefers-reduced-motion: reduce) {
-  .fondo-capa, .fondo-imagen, .fondo-acceso .container-tight { animation: none; }
+  .fondo-capa, .fondo-imagen { animation: none; }
 }
 .fondo-sistema { background-color: #f4f5f7; background-position: center; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; }
 .acceso-nombre { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+/* Ayuda bajo la tarjeta: va sobre la ilustración del fondo, por eso más oscura y con un velo claro. */
+.acceso-ayuda {
+  font-size: .875rem; color: #3d4654;
+  background: rgba(255, 255, 255, .7); border-radius: var(--tblr-border-radius); padding: .35rem .75rem;
+}
+
+/* Botón para mostrar la contraseña (campo(..., revelar=True)). Edge trae su propio ojo dentro del
+   campo: se oculta para que no haya dos con comportamientos distintos. */
+.btn-revelar { border: 0; background: none; padding: 0; line-height: 1; font-size: 1.15rem; cursor: pointer; }
+.btn-revelar:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; border-radius: 2px; }
+input[type=password]::-ms-reveal, input[type=password]::-ms-clear { display: none; }
 
 /* Cerrar sesión: ícono en rojo (acción de salida, distinta del resto del menú). */
 .nav-cerrar-sesion .nav-link-icon { color: var(--tblr-red); }
