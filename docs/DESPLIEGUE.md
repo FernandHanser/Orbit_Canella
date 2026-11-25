@@ -27,7 +27,7 @@ usan `C:\ORBIT`; cámbialas si el hub vive en otra carpeta.
 | Servidor | Windows Server con IIS, con acceso a SQL Server (AUTOMATE_CANELLA, STOD, SAP) y a las carpetas de red de los módulos | — |
 | Nombre DNS | La dirección que usarán los usuarios | `orbit.canella.com.gt` |
 | Certificado | Emitido para ese nombre (CA interna de Canella o pública), instalado en *Equipo local → Personal* | — |
-| Cuenta de servicio | Cuenta de dominio con la que corre el hub; necesita leer y escribir en las carpetas de red de los módulos | `CANELLA\svc_orbit` |
+| Cuenta de servicio | Cuenta de dominio con la que corre el hub; necesita leer y escribir en las carpetas de red de los módulos | `CONSULTORIA\svc_orbit` |
 
 ---
 
@@ -66,7 +66,7 @@ usan `C:\ORBIT`; cámbialas si el hub vive en otra carpeta.
 4. Dejar `.env` legible solo para administradores y la cuenta de servicio:
 
    ```powershell
-   icacls C:\ORBIT\.env /inheritance:r /grant:r "Administradores:F" "CANELLA\svc_orbit:R"
+   icacls C:\ORBIT\.env /inheritance:r /grant:r "Administradores:F" "CONSULTORIA\svc_orbit:R"
    ```
 
 5. Aplicar migraciones (solo cuando el responsable de la base lo autorice):
@@ -96,7 +96,7 @@ $nssm = "C:\ORBIT\herramientas\nssm.exe"
 & $nssm set ORBIT AppDirectory "C:\ORBIT"
 & $nssm set ORBIT DisplayName "ORBIT Canella"
 & $nssm set ORBIT Start SERVICE_AUTO_START
-& $nssm set ORBIT ObjectName "CANELLA\svc_orbit" "<contraseña de la cuenta>"
+& $nssm set ORBIT ObjectName "CONSULTORIA\svc_orbit" "<contraseña de la cuenta>"
 & $nssm set ORBIT AppStdout "C:\ORBIT\logs\servicio.log"
 & $nssm set ORBIT AppStderr "C:\ORBIT\logs\servicio.log"
 & $nssm set ORBIT AppRotateFiles 1
@@ -334,8 +334,8 @@ En el servidor, PowerShell **como administrador**:
   un usuario de dominio con acceso a ellas y dale lectura del `.env`:
 
   ```powershell
-  C:\Caddy\nssm.exe set ORBIT ObjectName "CANELLA\<usuario>" "<contraseña>"
-  icacls C:\ORBIT\.env /grant "CANELLA\<usuario>:R"
+  C:\Caddy\nssm.exe set ORBIT ObjectName "CONSULTORIA\<usuario>" "<contraseña>"
+  icacls C:\ORBIT\.env /grant "CONSULTORIA\<usuario>:R"
   Restart-Service ORBIT
   ```
 
