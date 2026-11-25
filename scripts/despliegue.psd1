@@ -7,7 +7,7 @@
     Rama          = 'dev'
     Carpeta       = 'C:\ORBIT'
 
-    PuertoInterno = 8000
+    PuertoInterno = 8001   # el 8000 ya lo usa otro programa en el .70
     PuertoPublico = 8443
 
     Arranque      = 'serve.py'
@@ -22,7 +22,7 @@
     Env = @{
         AUTOMATE_ENV          = 'production'
         HOST                  = '127.0.0.1'   # Waitress solo para Caddy
-        PORT                  = '8000'        # igual a PuertoInterno
+        PORT                  = '8001'        # igual a PuertoInterno
         PROXY_CONFIABLE       = '127.0.0.1'   # IP real del usuario detrás de Caddy
         SESSION_COOKIE_SECURE = '1'
         LOG_DIR               = ''            # la ruta del equipo no existe aquí: logs\ del hub

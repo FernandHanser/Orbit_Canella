@@ -235,7 +235,7 @@ proyectos (skill `caddy-deploy`). Lo propio de ORBIT está en
 [`scripts/despliegue.psd1`](../scripts/despliegue.psd1).
 
 ```
-Navegador ──HTTPS 8443──▶ Caddy compartido (C:\Caddy) ──HTTP 127.0.0.1:8000──▶ Waitress (servicio ORBIT)
+Navegador ──HTTPS 8443──▶ Caddy compartido (C:\Caddy) ──HTTP 127.0.0.1:8001──▶ Waitress (servicio ORBIT)
 ```
 
 ### Primera vez
@@ -261,9 +261,10 @@ En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «
 Si algo falla, el script dice en qué paso. Se corrige y se vuelve a correr: salta lo que ya esté
 hecho.
 
-**Qué hace:** revisa que los puertos 8000 y 8443 estén libres, clona `dev` en `C:\ORBIT`, crea el
+**Qué hace:** revisa que los puertos 8001 y 8443 estén libres (el 8000 ya
+está ocupado en ese servidor), clona `dev` en `C:\ORBIT`, crea el
 `.venv` e instala dependencias. Copia el `.env` y le cambia solo lo de `Env` en
-`despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8000`,
+`despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8001`,
 `PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1`, `LOG_DIR` vacío y
 `CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes e
 instala el servicio `ORBIT`. Si falta, instala el Caddy compartido (servicio `Caddy`). Luego
