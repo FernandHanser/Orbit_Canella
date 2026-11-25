@@ -227,104 +227,70 @@ nueva traía migraciones, primero `flask --app wsgi db downgrade` hasta la revis
 
 ## Ambiente de pruebas (128.1.200.70, rama `dev`, Caddy)
 
-Es el mismo procedimiento, con tres diferencias: la rama es `dev`, la base es aparte y en lugar
-de IIS se usa **Caddy**. Caddy es un solo `.exe`, se instala sin roles de Windows y genera su
-propio certificado.
+Corre la rama `dev` contra **la misma base que usa tu equipo**, con Caddy en lugar de IIS.
+Caddy es un solo `.exe` y genera su propio certificado. Todo lo instala
+[`scripts/instalar_pruebas.ps1`](../scripts/instalar_pruebas.ps1).
 
 ```
 Navegador ──HTTPS 8443──▶ Caddy (certificado interno) ──HTTP 127.0.0.1:8000──▶ Waitress (serve.py)
 ```
 
-**El ciclo de cada cambio:**
+### Primera vez
+
+En el servidor tienen que estar **Python 3.13** (para todos los usuarios, con «Add to PATH»),
+**Git for Windows** y el **ODBC Driver 17 o 18 for SQL Server**.
+
+1. Copia a una misma carpeta del servidor (p. ej. el escritorio, por escritorio remoto)
+   `scripts\instalar_pruebas.ps1` y el **`.env` de tu equipo**.
+2. Abre PowerShell **como administrador** en esa carpeta:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\instalar_pruebas.ps1
+   ```
+
+3. Cuando muestre la llave, pégala en GitHub: *Orbit_Canella → Settings → Deploy keys → Add deploy
+   key*, **sin** marcar *Allow write access*. Luego presiona Enter.
+4. Al terminar, entra a `https://128.1.200.70:8443` con tu usuario de STOD. El navegador avisará
+   del certificado: en pruebas se acepta.
+
+Si algo falla, el script dice en qué paso. Se corrige y se vuelve a correr: salta lo que ya esté
+hecho.
+
+**Qué hace:** clona `dev` en `C:\ORBIT`, crea el `.venv` e instala dependencias. Copia el `.env` y
+le cambia solo lo del servidor: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=8000`,
+`PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1`, `LOG_DIR` vacío y
+`CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes,
+descarga NSSM y Caddy a `C:\ORBIT\herramientas\`, instala los servicios `ORBIT` y `ORBIT-Caddy`,
+abre el 8443 y comprueba `/salud`. Opciones: `-Carpeta`, `-Rama`, `-Direccion`, `-Puerto` y
+`-Proxy http://128.1.200.140:8080`, si el servidor sale a internet por proxy.
+
+### Cada cambio
 
 1. En tu equipo: `python -m pytest`, luego `git push origin dev`.
-2. En 128.1.200.70: `cd C:\ORBIT` y después `.\scripts\actualizar.ps1`.
+2. En el servidor: `cd C:\ORBIT` y después `.\scripts\actualizar.ps1`.
 3. Probar en `https://128.1.200.70:8443`.
 4. Cuando todo esté probado, `dev` se pasa a `main` para producción.
 
-**El servidor 128.1.200.70 también aloja la base productiva AUTOMATE_CANELLA.** El hub de
-pruebas no debe tocarla nunca: su `.env` apunta solo a `AUTOMATE_CANELLA_PRUEBAS`.
+### Cuidado
 
-### Primera vez
+- **La base es compartida** con tu equipo: lo que hagas en pruebas se ve en local y al revés.
+  `actualizar.ps1` aplica las migraciones de `dev` a esa base, igual que `flask db upgrade` en
+  tu equipo.
+- **Carpetas de red.** El servicio `ORBIT` corre como `LocalSystem` y así no lee las carpetas de
+  red: ni los anexos de SAP de Expedientes ni el destino del corte de caja. Para probarlas, ponle
+  un usuario de dominio con acceso a ellas y dale lectura del `.env`:
 
-1. **Base de pruebas** (SSMS): crear una base vacía; las tablas las crea el paso 5.
+  ```powershell
+  C:\ORBIT\herramientas\nssm.exe set ORBIT ObjectName "CANELLA\<usuario>" "<contraseña>"
+  icacls C:\ORBIT\.env /grant "CANELLA\<usuario>:R"
+  Restart-Service ORBIT
+  ```
 
-   ```sql
-   CREATE DATABASE AUTOMATE_CANELLA_PRUEBAS COLLATE Modern_Spanish_CI_AS;
-   ```
-
-   Un usuario SQL con permisos `db_owner` **solo** en esa base, para que el hub pueda crear tablas.
-
-2. **Acceso a GitHub de solo lectura.** Se genera una *deploy key* (una llave SSH del servidor
-   que solo puede leer este repositorio):
-
-   ```powershell
-   ssh-keygen -t ed25519 -f $HOME\.ssh\orbit_deploy -N '""' -C "orbit-pruebas"
-   Get-Content $HOME\.ssh\orbit_deploy.pub   # pegar en GitHub: repo → Settings → Deploy keys (sin permiso de escritura)
-   git config --global core.sshCommand "ssh -i $($HOME -replace '\\','/')/.ssh/orbit_deploy"
-   ```
-
-3. **Instalar** como en el paso 1 de esta guía, pero con la rama `dev` y la URL SSH del repositorio:
-   `git clone -b dev git@github.com:FernandHanser/Orbit_Canella.git C:\ORBIT`.
-
-4. **`.env` de pruebas**: como el de producción, con estos cambios:
-
-   ```ini
-   AUTOMATE_ENV=production
-   DATABASE_URL=<cadena de AUTOMATE_CANELLA_PRUEBAS>
-   HOST=127.0.0.1
-   PORT=8000
-   PROXY_CONFIABLE=127.0.0.1
-   # Módulos sin efectos reales:
-   CORTE_CAJA_MODO=simulacion
-   ```
-
-   El login sigue usando STOD real, solo para lectura: cada quien entra con su usuario de
-   siempre. En **Expedientes**, el envío está en *modo prueba* por omisión. En ese modo todo
-   correo va a `cajamauto2@canella.com.gt` con «[PRUEBA]» en el asunto
-   ([PLAN_EXPEDIENTES_SEGUROS.md](PLAN_EXPEDIENTES_SEGUROS.md)). No hay que cambiarlo en pruebas.
-
-5. **Tablas y primer administrador** (`<usuario-stod>` es tu usuario de STOD):
-
-   ```powershell
-   .venv\Scripts\flask --app wsgi db upgrade
-   .venv\Scripts\flask --app wsgi db current                          # última migración con (head)
-   .venv\Scripts\flask --app wsgi usuarios superadmin <usuario-stod>
-   ```
-
-6. **Waitress como servicio**: igual que el paso 2 de esta guía, con el nombre de servicio `ORBIT`.
-
-7. **Caddy**: descargar `caddy.exe` (Windows amd64) de caddyserver.com a `C:\ORBIT\herramientas\`
-   y crear `C:\ORBIT\herramientas\Caddyfile`:
-
-   ```
-   https://128.1.200.70:8443 {
-       tls internal
-       reverse_proxy 127.0.0.1:8000
-   }
-   ```
-
-   Caddy ya manda `X-Forwarded-For` y `X-Forwarded-Proto`, que es lo que espera `PROXY_CONFIABLE`.
-
-   ```powershell
-   & $nssm install ORBIT-Caddy "C:\ORBIT\herramientas\caddy.exe" "run --config C:\ORBIT\herramientas\Caddyfile"
-   & $nssm set ORBIT-Caddy Start SERVICE_AUTO_START
-   Start-Service ORBIT-Caddy
-   New-NetFirewallRule -DisplayName "ORBIT pruebas" -Direction Inbound -Protocol TCP -LocalPort 8443 -Action Allow
-   ```
-
-8. **Verificar** con la tabla del paso 4, cambiando la dirección a `https://128.1.200.70:8443`.
-   El navegador avisará que el certificado no es de confianza. En pruebas se acepta; para que no
-   avise, se instala la raíz de Caddy en el equipo de quien prueba.
-
-**Cuenta del servicio.** NSSM corre el servicio como `LocalSystem` si no se indica otra cuenta.
-Así funciona todo menos las carpetas de red: los anexos de SAP de Expedientes y el destino del
-corte de caja. Para probarlas, el servicio `ORBIT` debe correr con un usuario de dominio que
-tenga acceso a esas carpetas: `& $nssm set ORBIT ObjectName "CANELLA\<usuario>" "<contraseña>"`.
-TI puede crear uno propio para el hub.
-
-**No crear en pruebas la tarea programada del corte de caja** mientras producción use el mismo
-buzón.
+- En Expedientes, el envío está en *modo prueba* por omisión: todo correo va a
+  `cajamauto2@canella.com.gt` con «[PRUEBA]» en el asunto
+  ([PLAN_EXPEDIENTES_SEGUROS.md](PLAN_EXPEDIENTES_SEGUROS.md)).
+- **No crear en pruebas la tarea programada del corte de caja** mientras producción use el mismo
+  buzón.
 
 ## Las tareas programadas van aparte
 

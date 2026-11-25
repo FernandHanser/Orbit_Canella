@@ -221,7 +221,7 @@ serve.py                  # servidor Waitress para ambientes distintos a desarro
 | [Interfaz](docs/INTERFAZ.md) | Plantillas, macros, estáticos, login y reglas de la CSP |
 | [Logs centrales](docs/LOGS.md) | Cómo emitir y consultar logs identificados por módulo |
 | [Ejecuciones y tareas programadas](docs/EJECUCIONES.md) | Registrar corridas y ejecutarlas sin sesión web |
-| [Publicar en la red](docs/DESPLIEGUE.md) | Windows Server + IIS con HTTPS, servicio de Windows, verificación y actualización |
+| [Publicar en la red](docs/DESPLIEGUE.md) | Producción con IIS y HTTPS; pruebas en 128.1.200.70 con Caddy (`scripts/instalar_pruebas.ps1`); actualización con `scripts/actualizar.ps1` |
 | [Plan de trabajo](docs/PLAN_DE_TRABAJO.md) | Fases, decisiones tomadas, login con STOD, seguridad urgente y orden |
 | [Expedientes de Seguros (Taller)](docs/PLAN_EXPEDIENTES_SEGUROS.md) | Módulo `expedientes_seguros`: datos en SAP, visor, paquete, correo y configuración |
 | [Corte de caja diario](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) | Módulo `corte_caja`: diseño, configuración, tarea programada y paso a producción |
