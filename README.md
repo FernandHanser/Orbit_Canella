@@ -19,6 +19,54 @@ Desarrollo y pruebas usan **la misma base** (`AUTOMATE_CANELLA` en 128.1.200.70)
 en una se ve en la otra. Cada despliegue queda en la pestaña **Actions** del repositorio, con su
 log. Detalle en [DESPLIEGUE.md](docs/DESPLIEGUE.md#ambiente-de-pruebas-12812002070-rama-dev-caddy).
 
+## Despliegue: Caddy + GitHub Actions
+
+ORBIT **no se instala ni se actualiza a mano**. El ambiente de pruebas está publicado con
+**Caddy** y se actualiza con **GitHub Actions**:
+
+```
+Tu equipo ──git push dev──▶ GitHub Actions ──1. pruebas (máquina de GitHub)
+                                            └─2. si pasan: runner en srv-desait5 ──▶ actualizar.ps1
+
+Navegador ──HTTPS :8443──▶ Caddy (C:\Caddy) ──HTTP 127.0.0.1:8000──▶ servicio ORBIT (Waitress)
+```
+
+| Pieza | Qué hace | Dónde |
+|---|---|---|
+| **Caddy** | Pone HTTPS (certificado interno) y reenvía a ORBIT. Es uno solo para todos los proyectos de prueba del servidor | `C:\Caddy` (servicio `Caddy`); el sitio de ORBIT en `C:\Caddy\sitios\orbit.caddy` |
+| **Servicio ORBIT** | La aplicación con Waitress (`serve.py`). Escucha solo en `127.0.0.1`: sin Caddy no se llega desde la red | `C:\ORBIT` (servicio `ORBIT`, instalado con NSSM) |
+| **Runner de GitHub Actions** | Agente que despliega con cada push a `dev` que pase las pruebas. Sale a GitHub por HTTPS, sin abrir puertos | `C:\actions-runner\orbit` (servicio `actions.runner.…srv70-orbit`) |
+| **Scripts** | `instalar_pruebas.ps1` (una vez), `actualizar.ps1` (cada despliegue), `despliegue.psd1` (datos de ORBIT) | `scripts/` |
+| **Workflow** | Pruebas y despliegue | `.github/workflows/despliegue-pruebas.yml` |
+
+**Para desplegar un cambio:** `git push origin dev`. Nada más. El avance y el log quedan en la
+pestaña **Actions** del repositorio. Si las pruebas fallan, no se despliega.
+
+**Para administrar el servidor** sin escritorio remoto, en Git Bash: `cccaddy`. Es una consola
+con los servicios (Caddy, ORBIT, runner), su estado, salud y commit. Permite iniciar, detener,
+reiniciar, ver logs y recargar Caddy. Pide la cuenta admin del servidor (`itcanella@consultoria.local`).
+
+**Tómalo en cuenta:**
+
+- **No edites archivos en el servidor.** `C:\ORBIT` es un clon de `dev`: el despliegue se niega
+  a seguir si encuentra cambios hechos a mano. Todo cambio entra por Git.
+- **Las migraciones se aplican solas** en cada despliegue, contra la base compartida con
+  desarrollo. Revisa siempre la migración generada antes de hacer push.
+- **El `.env` del servidor no está en Git.** Vive en `C:\ORBIT\.env`, protegido. Si agregas una
+  variable nueva, hay que ponerla allá a mano (escritorio remoto) y reiniciar el servicio.
+- **Dependencias nuevas:** si creas un `requirements-<módulo>.txt`, agrégalo a `Requisitos` en
+  `scripts/despliegue.psd1`. Si no, el servidor no lo instala (`tests/test_scripts.py` lo detecta).
+- **Quien pueda hacer push a este repositorio ejecuta código en el servidor** a través del runner.
+  El repositorio debe seguir siendo privado y con pocos colaboradores.
+- **Puertos:** 8443 público y 8000 interno. Si estuvieran ocupados, el instalador toma los
+  siguientes libres y los anota en el sitio de Caddy.
+- **Producción todavía no existe.** Cuando exista, irá con la rama `main`, su propio runner, su
+  propia base y un despliegue con control (botón manual o aprobación), no automático en cada push.
+
+Instalación desde cero, runner, cuenta de servicio y problemas comunes:
+[DESPLIEGUE.md](docs/DESPLIEGUE.md#ambiente-de-pruebas-12812002070-rama-dev-caddy). El
+procedimiento es el mismo para cualquier proyecto nuevo (skill `caddy-deploy`).
+
 ## Módulos
 
 | Módulo | Qué hace | Estado | Guía |
