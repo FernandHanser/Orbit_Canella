@@ -137,11 +137,11 @@ def test_paginacion_de_ejecuciones_conserva_filtros(app, entrar_como, admin):
         ejecutar_tarea("ejemplo", "demo", proceso="prueba", parametros={"pasos": 0})
     c = entrar_como(admin)
     p1 = c.get("/admin/ejecuciones?modulo=ejemplo").get_data(as_text=True)
-    assert p1.count("/admin/ejecuciones/") == 15
+    assert p1.count('href="/admin/ejecuciones/') == 15
     assert "Mostrando <span>1</span>–<span>15</span>" in p1 and "de <span>30</span>" in p1
     assert "modulo=ejemplo&amp;pagina=2" in p1
     p2 = c.get("/admin/ejecuciones?modulo=ejemplo&pagina=2").get_data(as_text=True)
-    assert p2.count("/admin/ejecuciones/") == 15
+    assert p2.count('href="/admin/ejecuciones/') == 15
     fuera = c.get("/admin/ejecuciones?pagina=99")
     assert fuera.status_code == 200
 
@@ -431,3 +431,28 @@ def test_ejecuciones_y_logs_muestran_el_nombre_del_modulo_y_la_fecha_como_el_res
     logs = c.get("/admin/logs").get_data(as_text=True)
     assert re.search(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", logs) and not re.search(r"\d{4}-\d{2}-\d{2} \d{2}:", logs)
     assert 'title="core">Hub<' in logs
+
+
+# ---------------------------------------------------------------- auditoría Krug del 25/11/2026
+
+def test_ejecuciones_la_fila_abre_el_detalle_y_muestra_el_error(app, entrar_como, admin):
+    from app.extensions import db
+    e = Ejecucion(modulo_id="ejemplo", tarea="demo", proceso="prueba", estado="error",
+                  error="No se pudo leer el buzón: tiempo de espera agotado")
+    db.session.add(e)
+    db.session.commit()
+    html = entrar_como(admin).get("/admin/ejecuciones").get_data(as_text=True)
+    assert f'<tr data-fila-enlace="/admin/ejecuciones/{e.id}">' in html
+    assert f'href="/admin/ejecuciones/{e.id}"' in html   # enlace normal para teclado y lectores
+    assert "No se pudo leer el buzón: tiempo de espera agotado</div>" in html
+
+
+def test_logs_abre_sin_debug_y_todos_lo_incluye(app, entrar_como, admin):
+    get_logger("ejemplo").debug("detalle interno", extra={"evento": "prueba.debug"})
+    get_logger("ejemplo").info("algo que pasó", extra={"evento": "prueba.info"})
+    c = entrar_como(admin)
+    por_defecto = c.get("/admin/logs").get_data(as_text=True)
+    assert "prueba.info" in por_defecto and "prueba.debug" not in por_defecto
+    assert '<option value="INFO" selected>' in por_defecto
+    todos = c.get("/admin/logs?nivel=").get_data(as_text=True)
+    assert "prueba.debug" in todos and "prueba.info" in todos

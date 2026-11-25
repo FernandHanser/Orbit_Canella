@@ -123,6 +123,20 @@
    definido en la plantilla con --color-pestana. */
 .nav-tabs .pestana-estado.active { box-shadow: inset 0 -2px 0 var(--color-pestana, var(--tblr-primary)); }
 
+/* Tablas del hub (plantilla principal; ver docs/INTERFAZ.md, «Tablas»):
+   * .col-acciones: la columna de acciones queda fija a la derecha cuando la tabla se desplaza de
+     lado (ventanas angostas), para que «Editar» y compañía nunca queden fuera de la vista.
+   * tr[data-fila-enlace]: la fila entera abre su detalle (interaccion.js); se nota al pasar el mouse. */
+.table .col-acciones {
+  position: sticky; right: 0; z-index: 1; white-space: nowrap;
+  background-color: var(--tblr-bg-surface); box-shadow: inset 1px 0 0 var(--tblr-border-color);
+}
+tr[data-fila-enlace] { cursor: pointer; }
+tr[data-fila-enlace]:hover > * { background-color: var(--tblr-active-bg); }
+tr[data-fila-enlace]:hover > .col-acciones { background-color: var(--tblr-bg-surface); }
+/* Error de una ejecución, en una línea bajo su estado (el texto completo, al pasar el mouse). */
+.ejecucion-error { max-width: 18rem; }
+
 /* Tarjetas de módulos en el inicio */
 .tarjeta-modulo .icono-modulo { width: 3rem; height: 3rem; font-size: 1.6rem; }
 

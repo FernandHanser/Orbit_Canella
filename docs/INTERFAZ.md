@@ -295,3 +295,25 @@ Expedientes. Solo va donde el dato viene de SAP, no como adorno.
 
 Pruebas: `tests/test_logs_ejecuciones.py` (sección auditoría Krug) y
 `tests/test_interfaz.py::test_administracion_no_remite_a_archivos_del_codigo`.
+
+
+## Tablas: reglas de la plantilla del hub
+
+Valen para toda tabla del hub (administración hoy; los módulos, cuando se revisen). Salen de la
+auditoría Krug del 25/11/2026 de Inicio y Administración, vista a media pantalla (767 px).
+
+| Regla | Cómo se aplica | Por qué |
+|---|---|---|
+| **La acción de cada fila nunca queda fuera de la vista** | Clase `col-acciones` en el `<th>` y el `<td>` de la columna de botones: queda fija a la derecha cuando la tabla se desplaza de lado (CSS en `automate.css`). El `<th>` lleva `<span class="visually-hidden">Acciones</span>` | En una ventana angosta «Editar» quedaba a la derecha, fuera de pantalla: la única acción de la fila se encontraba por accidente |
+| **Lo que identifica la fila es lo que se pulsa** | Si la fila abre un detalle: `data-fila-enlace="<url>"` en el `<tr>` (toda la fila abre; Ctrl/clic central, en otra pestaña) **y** un `<a>` normal al mismo destino en la fila, en el dato que la identifica (el nombre de la persona). Los botones y enlaces de la fila siguen haciendo lo suyo | En Ejecuciones solo se podía pulsar un código (`7d905c14…`), lo menos significativo de la fila; en Usuarios, solo un botón al final |
+| **Lo que falló se ve sin entrar** | En listas de ejecuciones, la línea del error bajo su estado (`.ejecucion-error`, texto completo al pasar el mouse) | Había que abrir cada ejecución para saber por qué falló |
+| **Logs abre en lo útil** | Nivel mínimo **INFO** por defecto (`NIVEL_LOGS_POR_DEFECTO` en `app/core/admin.py`); el DEBUG sigue con «Todos» | Lo primero que se veía era el arranque del servidor y el registro de módulos |
+
+Inicio, en la misma auditoría:
+
+- Encabezado solo con el saludo («Hola, Ana»): el nombre del hub ya está en la marca del menú.
+- El nombre del módulo en la tarjeta se escribe igual que en el menú (sin mayúsculas forzadas):
+  regla «un módulo, un nombre».
+
+Pruebas: `tests/test_interfaz.py` y `tests/test_logs_ejecuciones.py` (secciones «auditoría Krug
+del 25/11/2026»).

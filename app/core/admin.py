@@ -22,6 +22,9 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 log = get_logger("core")
 
 MAX_EVENTOS_LOGS = 5000  # tope de lectura de archivos por consulta
+# Logs abre sin el DEBUG (arranque, registro de módulos): es ruido para quien busca qué pasó.
+# Sigue disponible eligiendo «Todos» en el filtro (nivel=""), que es distinto de no mandar nivel.
+NIVEL_LOGS_POR_DEFECTO = "INFO"
 
 
 # --------------------------------------------------------------------------- utilidades
@@ -240,7 +243,7 @@ def logs():
     filtro = {
         "modulo": request.args.get("modulo") or None,
         "ejecucion_id": (request.args.get("ejecucion_id") or "").strip() or None,
-        "nivel_minimo": request.args.get("nivel") or None,
+        "nivel_minimo": request.args.get("nivel", NIVEL_LOGS_POR_DEFECTO) or None,
         "usuario": (request.args.get("usuario") or "").strip() or None,
         "texto": (request.args.get("texto") or "").strip() or None,
         "dias": request.args.get("dias", default=1, type=int),

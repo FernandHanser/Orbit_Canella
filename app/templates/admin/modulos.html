@@ -20,7 +20,7 @@
           <th>Permiso</th>
           <th>Usuarios</th>
           <th>Estado</th>
-          <th class="w-1"></th>
+          <th class="w-1 col-acciones"><span class="visually-hidden">Acciones</span></th>
         </tr>
       </thead>
       <tbody>
@@ -54,7 +54,7 @@
                 <span class="badge bg-secondary-lt">Deshabilitado</span>
               {% endif %}
             </td>
-            <td>
+            <td class="col-acciones">
               {% if f.catalogo %}
                 {# Deshabilitar bloquea el módulo para todos sus usuarios: se confirma. Habilitar no. #}
                 <form method="post" action="{{ url_for('admin.modulo_estado', modulo_id=f.id) }}"

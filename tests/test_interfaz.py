@@ -35,7 +35,10 @@ def test_tarjeta_muestra_ultima_ejecucion_y_titulo_de_seccion(app, entrar_como, 
 
     c = entrar_como(autorizado)
     html = c.get("/").data.decode()
-    assert "Mis automatizaciones" in html and "MÓDULO DE EJEMPLO" in html
+    import re
+    assert "Mis automatizaciones" in html and "MÓDULO DE EJEMPLO" not in html
+    # Mismo nombre que en el menú (regla «un módulo, un nombre»), no en mayúsculas.
+    assert re.search(r'<h3 class="card-title mb-1">\s*Módulo de ejemplo', html)
     assert "Sin ejecuciones" in html and "Abrir" in html
 
     ejecutar_tarea("ejemplo", "demo", proceso="prog", parametros={"pasos": 1})
@@ -139,3 +142,29 @@ def test_administracion_no_remite_a_archivos_del_codigo(entrar_como, superadmin)
     modulos = c.get("/admin/modulos").get_data(as_text=True)
     assert "docs/GLOSARIO.md" not in usuarios and "__init__.py" not in modulos
     assert "alert-info" not in usuarios          # sin el aviso largo antes de la tabla
+
+
+# ---------------------------------------------------------------- auditoría Krug del 25/11/2026
+
+def test_inicio_sin_pretitulo_repetido(entrar_como, autorizado):
+    html = entrar_como(autorizado).get("/").data.decode()
+    # El nombre del hub ya está en la marca del menú: el encabezado del inicio no lo repite.
+    assert '<div class="page-pretitle">' not in html and "Hola," in html
+
+
+def test_usuarios_el_nombre_abre_la_edicion_y_la_accion_queda_fija(entrar_como, admin, autorizado):
+    html = entrar_como(admin).get("/admin/usuarios").data.decode()
+    url = f"/admin/usuarios/{autorizado.id}"
+    assert f'<tr data-fila-enlace="{url}">' in html
+    assert f'<a href="{url}" class="text-reset">' in html
+    assert '<td class="col-acciones">' in html and 'th class="w-1 col-acciones"' in html
+
+
+def test_usuarios_admin_no_puede_abrir_al_superadmin(entrar_como, admin, superadmin):
+    html = entrar_como(admin).get("/admin/usuarios").data.decode()
+    assert f"/admin/usuarios/{superadmin.id}" not in html
+
+
+def test_catalogo_con_acciones_fijas(entrar_como, superadmin):
+    html = entrar_como(superadmin).get("/admin/modulos").data.decode()
+    assert 'th class="w-1 col-acciones"' in html and '<td class="col-acciones">' in html

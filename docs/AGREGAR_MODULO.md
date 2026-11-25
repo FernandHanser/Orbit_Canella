@@ -138,6 +138,9 @@ cabecera `X-CSRFToken` con el valor de `csrf_token()`.
 - Macros, estilos y reglas de la CSP: ver [INTERFAZ.md](INTERFAZ.md).
 - Botones que ejecutan algo: `data-cargando` (spinner) y, si hay efectos irreversibles,
   `data-confirmar` (modal). Ver [INTERFAZ.md](INTERFAZ.md#spinners-y-confirmaciones).
+- Tablas: la columna de acciones con `col-acciones` (queda fija a la derecha) y, si cada fila
+  abre un detalle, `data-fila-enlace` en el `<tr>` más un enlace normal en la fila. Ver
+  [INTERFAZ.md](INTERFAZ.md#tablas-reglas-de-la-plantilla-del-hub).
 
 ### Listas largas: paginación
 

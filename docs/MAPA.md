@@ -164,7 +164,7 @@ Todos siguen el mismo reparto de archivos; no todos los tienen todos.
 | Login y errores sin sesión | `app/templates/base_publica.html` |
 | Componentes reutilizables | `app/templates/_macros.html` |
 | Estilos propios | `app/static/css/automate.css` (Tabler 1.5.1 local, sin CDN) |
-| Spinners y confirmaciones (`data-cargando`, `data-confirmar`) | `app/static/js/interaccion.js` |
+| Spinners, confirmaciones y filas que abren su detalle (`data-cargando`, `data-confirmar`, `data-fila-enlace`) | `app/static/js/interaccion.js` |
 | Menú que se oculta | `app/static/js/menu.js` |
 
 Sin JavaScript en línea (lo prohíbe la CSP). Detalle en [INTERFAZ.md](INTERFAZ.md).

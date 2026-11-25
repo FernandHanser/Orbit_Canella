@@ -17,6 +17,11 @@
                              leer un PDF). Opcionales: data-cargando-detalle="…" (segunda línea) y
                              data-cargando-logo="<url>" (p. ej. el logo de SAP).
 
+  data-fila-enlace="<url>"    (en un <tr>): toda la fila abre esa dirección, no solo un enlace pequeño.
+                             Ctrl/Cmd + clic o clic central la abre en otra pestaña. Los enlaces,
+                             botones y campos de la fila siguen haciendo lo suyo. La fila debe tener
+                             además un <a> normal al mismo destino (para teclado y lectores).
+
   Desde JavaScript: window.hub.confirmar({titulo, mensaje, boton, peligro, devolverFoco, alConfirmar})
   abre el mismo modal.
 
@@ -89,6 +94,19 @@
     enlace.appendChild(spinner(enlace.getAttribute("data-cargando")));
     mostrarPantalla(enlace);
   });
+
+  // Filas que abren su detalle (data-fila-enlace).
+  var INTERACTIVOS = "a, button, input, select, textarea, label, summary, details, [data-bs-toggle]";
+  function abrirFila(evento) {
+    var fila = evento.target.closest("tr[data-fila-enlace]");
+    if (!fila || evento.target.closest(INTERACTIVOS)) return;
+    if (window.getSelection && String(window.getSelection())) return; // estaba seleccionando texto para copiarlo
+    var url = fila.getAttribute("data-fila-enlace");
+    if (evento.button === 1 || evento.ctrlKey || evento.metaKey) window.open(url, "_blank", "noopener");
+    else if (evento.button === 0) window.location.href = url;
+  }
+  document.addEventListener("click", abrirFila);
+  document.addEventListener("auxclick", abrirFila);
 
   function mostrarCargando(form) {
     var texto = form.getAttribute("data-cargando");

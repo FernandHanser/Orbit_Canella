@@ -25,18 +25,19 @@
           <th>Estado</th>
           <th>Módulos asignados</th>
           <th>Último acceso</th>
-          <th class="w-1"></th>
+          <th class="w-1 col-acciones"><span class="visually-hidden">Acciones</span></th>
         </tr>
       </thead>
       <tbody>
         {% for u in usuarios %}
-          <tr>
+          {% set editable = current_user.es_superadmin or not u.es_superadmin %}
+          <tr{% if editable %} data-fila-enlace="{{ url_for('admin.usuario_editar', usuario_id=u.id) }}"{% endif %}>
             <td>
               <div class="d-flex align-items-center gap-2">
                 {{ avatar_persona(u) }}
                 <div>
                 <div class="fw-bold">
-                  {{ u.nombre_completo }}
+                  {% if editable %}<a href="{{ url_for('admin.usuario_editar', usuario_id=u.id) }}" class="text-reset">{{ u.nombre_completo }}</a>{% else %}{{ u.nombre_completo }}{% endif %}
                   {% if not u.tiene_nombre_registrado %}<span class="badge bg-yellow-lt ms-1" title="STOD no guarda el nombre: regístralo en Editar">Sin nombre registrado</span>{% endif %}
                 </div>
                 <div class="text-secondary small">{{ u.usuario_stod }}{% if u.email %} · {{ u.email }}{% endif %}</div>
@@ -59,8 +60,8 @@
               {% endfor %}
             </td>
             <td class="celda-ts text-secondary">{{ u.ultimo_acceso|fecha }}</td>
-            <td>
-              {% if current_user.es_superadmin or not u.es_superadmin %}
+            <td class="col-acciones">
+              {% if editable %}
                 <a href="{{ url_for('admin.usuario_editar', usuario_id=u.id) }}" class="btn btn-sm">Editar</a>
               {% endif %}
             </td>
