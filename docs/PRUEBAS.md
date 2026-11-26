@@ -47,7 +47,7 @@ tiene el skill del proyecto **`qa-orbit`** (`.claude/skills/qa-orbit/`): basta p
 | **Unitarias** | Una función aislada, sin base de datos ni servidor | Hash de contraseñas de STOD, saneamiento de logs, paginación |
 | **Arquitectura** | No ejecutan el hub: leen el código (imports, textos, plantillas) y verifican las reglas de [ARQUITECTURA.md](ARQUITECTURA.md) | El núcleo no depende de los módulos; ningún módulo importa ni nombra a otro; no hay ciclos; cada módulo tiene sus pruebas |
 | **Contrato de módulos** | Corren solas sobre **cada** módulo que el hub descubre, sin que nadie las escriba | Todas las rutas de un módulo (pantallas, API, estáticos) piden sesión, dan 403 sin el módulo asignado y 503 con el módulo deshabilitado |
-| **De punta a punta** (`--e2e`) | Un navegador real (Playwright) contra el servidor de QA: lo que el `test_client` no ve porque no ejecuta JavaScript | El aviso de sesión aparece y «Extender» funciona; dar el rol de Administrador pide confirmación |
+| **De punta a punta** (`--e2e`) | Un navegador real (Playwright) contra el servidor de QA: lo que el `test_client` no ve porque no ejecuta JavaScript | El aviso de sesión aparece y «Extender» funciona; dar el rol de Administrador pide confirmación; en celular los botones no tapan el título |
 
 Predominan las de integración porque lo que más interesa en el hub es que login, permisos, módulos,
 base de datos y logs funcionen **juntos**. Una prueba unitaria no detectaría que alguien sin
@@ -68,7 +68,7 @@ permiso entra a un módulo escribiendo la URL.
 | [tests/test_interfaz.py](../tests/test_interfaz.py) | Tarjetas del inicio (última ejecución), spinners y confirmaciones en las pantallas clave (ver [INTERFAZ.md](INTERFAZ.md#spinners-y-confirmaciones)) |
 | [tests/test_expedientes_seguros.py](../tests/test_expedientes_seguros.py) | Módulo Expedientes de Seguros: reglas, PDF, visor, paquete, correo, permisos y aseguradoras con SAP simulado (ver [PLAN_EXPEDIENTES_SEGUROS.md](PLAN_EXPEDIENTES_SEGUROS.md#pruebas)) |
 | [tests/test_corte_caja.py](../tests/test_corte_caja.py) | Módulo Corte de caja: reglas, archivador, tarea con buzón simulado, panel y CLI (ver [PLAN_INTEGRACION_CORTE_DE_CAJA.md](PLAN_INTEGRACION_CORTE_DE_CAJA.md#pruebas)) |
-| [tests/e2e/](../tests/e2e/) | De punta a punta con `--e2e`: login y ojo de contraseña, acceso a módulos, confirmación al deshabilitar un módulo y al dar el rol de Administrador, aviso de sesión. `servidor.py` es el servidor de QA |
+| [tests/e2e/](../tests/e2e/) | De punta a punta con `--e2e`: login y ojo de contraseña, acceso a módulos, confirmación al deshabilitar un módulo y al dar el rol de Administrador, aviso de sesión, encabezados en celular. `servidor.py` es el servidor de QA |
 | `tests/test_<id>.py` | Las de cada módulo, **obligatorio**: juego mínimo según lo que tenga el módulo en [AGREGAR_MODULO.md](AGREGAR_MODULO.md#9-pruebas) |
 
 Los fixtures comunes (`app`, `client`, `entrar_como`, `crear_usuario`, `admin`, `autorizado`)

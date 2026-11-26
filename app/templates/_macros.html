@@ -115,7 +115,7 @@
     <div class="container-xl">
       <div class="row g-2 align-items-center">
         {% if origen %}<div class="col-auto align-self-end encabezado-origen">{{ origen }}</div>{% endif %}
-        <div class="col">
+        <div class="col encabezado-titulo">
           {% if pretitulo %}<div class="page-pretitle">{% if pretitulo_url %}<a href="{{ pretitulo_url }}" class="text-reset">{{ pretitulo }}</a>{% else %}{{ pretitulo }}{% endif %}</div>{% endif %}
           <h2 class="page-title">{{ titulo }}</h2>
           {% if subtitulo %}<div class="page-subtitle">{{ subtitulo }}</div>{% endif %}

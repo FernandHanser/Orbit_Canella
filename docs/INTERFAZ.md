@@ -45,7 +45,7 @@ todo el ancho. Queda un ícono fijo arriba a la izquierda para mostrarlo de nuev
 
 | Macro | Qué dibuja |
 |---|---|
-| `encabezado(titulo, pretitulo, pretitulo_url=None)` | Encabezado de página. Con botones a la derecha: `{% call encabezado("Título") %}<a class="btn">…</a>{% endcall %}`. Con `pretitulo_url`, el pretítulo (el nivel de arriba, p. ej. la lista) es un enlace a él |
+| `encabezado(titulo, pretitulo, pretitulo_url=None)` | Encabezado de página. Con botones a la derecha: `{% call encabezado("Título") %}<a class="btn">…</a>{% endcall %}`. Con `pretitulo_url`, el pretítulo (el nivel de arriba, p. ej. la lista) es un enlace a él. En celular, si título y botones no caben juntos, los botones bajan a su propia línea (`.encabezado-titulo` no se encoge de 12rem; prueba `tests/e2e/test_celular.py`) |
 | `campo(form.campo, ayuda=None, autocomplete=None, autofocus=False, revelar=False)` | Campo de formulario WTForms con etiqueta, errores y ayuda. Con `revelar=True` (contraseñas) agrega el botón del ojo para mostrar lo escrito (`data-revelar-contrasena`, ver abajo). Los validadores llevan siempre su mensaje en español (`DataRequired(message=…)`): sin él, WTForms responde en inglés |
 | `interruptor(form.campo_booleano, ayuda=None)` | Casilla tipo switch |
 | `estado_ejecucion(estado)` | Etiqueta de color para `exito`, `advertencia`, `error`, `en_curso` |

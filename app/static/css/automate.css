@@ -171,6 +171,9 @@ tr[data-fila-enlace]:hover > .col-acciones { background-color: var(--tblr-bg-sur
 .logo-sap-grande { height: 3.4rem; vertical-align: bottom; }
 .logo-sap-mediano { height: 2.25rem; }
 .encabezado-origen { padding-bottom: .15rem; }
+/* El título del encabezado no se encoge por debajo de este ancho: en celular, si no cabe junto a
+   los botones, los botones bajan a su propia línea (la fila es flex-wrap) en vez de taparlo. */
+.encabezado-titulo { min-width: 12rem; }
 
 /* Pantalla de carga (interaccion.js → data-cargando-pagina): cubre la página mientras llega la siguiente.
    Aparece con .25 s de retraso para no parpadear cuando la respuesta es inmediata. */
