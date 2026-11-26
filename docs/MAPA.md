@@ -177,5 +177,6 @@ Sin JavaScript en línea (lo prohíbe la CSP). Detalle en [INTERFAZ.md](INTERFAZ
 
 `python -m pytest` corre todo en segundos, con SQLite en memoria y STOD simulado: nunca toca la
 base real. Un archivo por área (`tests/test_<area>.py`); las reglas de arquitectura están en
-`tests/test_arquitectura.py`; el acceso de cada módulo, en `tests/test_contrato_modulos.py`. Ver
-[PRUEBAS.md](PRUEBAS.md).
+`tests/test_arquitectura.py`; el acceso de cada módulo, en `tests/test_contrato_modulos.py`. Las de
+navegador real (Playwright) están en `tests/e2e/` y se corren aparte con `--e2e`, contra el servidor
+de QA (`tests/e2e/servidor.py`). Ver [PRUEBAS.md](PRUEBAS.md).

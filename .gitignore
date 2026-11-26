@@ -24,3 +24,6 @@ contexto/
 .coverage
 htmlcov/
 .claude/settings.local.json
+
+# Playwright: traces y capturas de pruebas que fallan (tests/e2e)
+test-results/

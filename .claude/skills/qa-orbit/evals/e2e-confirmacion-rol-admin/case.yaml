@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: e2e-confirmacion-rol-admin
+expected_outcome: |
+  Una prueba Playwright que usa el servidor de QA y los fixtures del proyecto, abre el formulario de un usuario, marca el rol de administrador, comprueba el modal de confirmación y que cancelar no guarda el cambio; corrida y con su resultado reportado.

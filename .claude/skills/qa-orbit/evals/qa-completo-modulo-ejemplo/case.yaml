@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: qa-completo-modulo-ejemplo
+expected_outcome: |
+  Un informe de QA en español con veredicto, que corrió la suite de pytest, revisó el módulo contra las reglas del hub y su juego mínimo de pruebas, y lo vio en un navegador con distintos usuarios sin tocar la base real.

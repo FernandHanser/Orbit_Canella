@@ -14,7 +14,9 @@ import pytest
 RAIZ = Path(__file__).resolve().parent.parent
 ARCHIVOS = sorted([*(RAIZ / "scripts").glob("*.ps1"), *(RAIZ / "scripts").glob("*.psd1")])
 CONFIG = (RAIZ / "scripts" / "despliegue.psd1").read_text(encoding="utf-8-sig")
-REQUISITOS = sorted(p.name for p in RAIZ.glob("requirements*.txt") if p.name != "requirements-dev.txt")
+# dev (pytest) y e2e (Playwright y su navegador) son herramientas de quien desarrolla: no van al servidor.
+SOLO_DESARROLLO = {"requirements-dev.txt", "requirements-e2e.txt"}
+REQUISITOS = sorted(p.name for p in RAIZ.glob("requirements*.txt") if p.name not in SOLO_DESARROLLO)
 
 
 def _valor(clave: str) -> str:

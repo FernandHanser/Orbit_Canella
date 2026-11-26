@@ -56,6 +56,7 @@ reiniciar, ver logs y recargar Caddy. Pide la cuenta admin del servidor (`itcane
   variable nueva, hay que ponerla allá a mano (escritorio remoto) y reiniciar el servicio.
 - **Dependencias nuevas:** si creas un `requirements-<módulo>.txt`, agrégalo a `Requisitos` en
   `scripts/despliegue.psd1`. Si no, el servidor no lo instala (`tests/test_scripts.py` lo detecta).
+  `requirements-dev.txt` y `requirements-e2e.txt` no van: son herramientas de quien desarrolla.
 - **Quien pueda hacer push a este repositorio ejecuta código en el servidor** a través del runner.
   El repositorio debe seguir siendo privado y con pocos colaboradores.
 - **Puertos:** 8443 público y 8000 interno. Si estuvieran ocupados, el instalador toma los
@@ -95,6 +96,7 @@ Lee en este orden (unos 30 minutos) y no hace falta más para empezar:
 | Tocar el núcleo (`app/core/`) | [ARQUITECTURA.md](docs/ARQUITECTURA.md) completo |
 | Cambiar pantallas | [INTERFAZ.md](docs/INTERFAZ.md) |
 | Escribir pruebas | [PRUEBAS.md](docs/PRUEBAS.md) |
+| Hacer QA antes de publicar | Pídeselo a Claude Code («haz QA de…»): skill `qa-orbit` en `.claude/skills/` |
 
 **Ramas:** se trabaja en `dev`; `main` es lo que irá a producción. Un push a `dev` despliega solo
 en el ambiente de pruebas, pero únicamente si `python -m pytest` pasa completo en GitHub (incluye
@@ -137,6 +139,8 @@ source .venv/Scripts/activate
 pip install -r requirements-dev.txt        # requirements.txt si no se van a correr pruebas
 pip install -r requirements-corte_caja.txt # solo en el servidor que ejecuta ese módulo
 pip install -r requirements-expedientes_seguros.txt # PDF y miniaturas (también lo instala requirements-dev)
+pip install -r requirements-e2e.txt        # opcional: pruebas en navegador (Playwright), solo en tu equipo
+python -m playwright install chromium      #   y su navegador, una vez
 
 # 2. Configuración local con una SECRET_KEY aleatoria
 cp .env.example .env
@@ -289,7 +293,8 @@ scripts/
 └── actualizar.ps1        # actualización del servidor (la corre GitHub Actions en cada push)
 .github/workflows/        # despliegue-pruebas.yml: pruebas y despliegue a pruebas en cada push a dev
 docs/                     # guías (ver abajo)
-tests/                    # pruebas automáticas (pytest)
+tests/                    # pruebas automáticas (pytest); tests/e2e: navegador real (Playwright)
+.claude/skills/qa-orbit/  # skill de QA para Claude Code (pruebas, reglas del hub y navegador)
 wsgi.py                   # entrada para `flask --app wsgi` y servidores WSGI
 serve.py                  # servidor Waitress para ambientes distintos a desarrollo
 ```
@@ -338,6 +343,8 @@ Todos con el entorno activado (`source .venv/Scripts/activate`):
 | `flask --app wsgi db migrate -m "mensaje"` | Genera una migración tras cambiar modelos |
 | `flask --app wsgi db upgrade` | Aplica las migraciones pendientes |
 | `python -m pytest` | Corre todas las pruebas (ver [PRUEBAS.md](docs/PRUEBAS.md)) |
+| `python -m pytest --e2e tests/e2e` | Pruebas de punta a punta en un navegador real (Playwright; requiere `requirements-e2e.txt`) |
+| `python -m tests.e2e.servidor` | Hub de QA en http://127.0.0.1:5057: SQLite temporal, STOD simulado, sin el `.env` real |
 | `git push origin dev` | Sube los cambios; GitHub Actions los prueba y los despliega en https://128.1.200.70:8443 |
 
 ---

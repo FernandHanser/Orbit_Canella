@@ -49,8 +49,9 @@ flask --app wsgi db upgrade
   personales (DPI, expedientes, correos reales).
 - **No conectar a las bases reales** (AUTOMATE_CANELLA en 128.1.200.70, STOD, SAP) ni aplicar
   migraciones allí sin que el responsable lo pida: darle los comandos exactos.
-- Para ver una pantalla sin la base real: un servidor aparte con `create_app("testing", ...)`,
-  SQLite temporal y usuario del STOD simulado, en otro puerto (p. ej. 5057). Nunca el de :5000.
+- Para ver una pantalla sin la base real: `python -m tests.e2e.servidor` (SQLite temporal, STOD
+  simulado, sin el `.env`, puerto 5057). Nunca el de :5000. Pruebas de navegador:
+  `python -m pytest --e2e tests/e2e`. Revisión de QA completa: skill `qa-orbit`.
 - Un módulo nuevo lleva `tests/test_<id>.py` con el juego mínimo de AGREGAR_MODULO.md §9.
 - Toda funcionalidad nueva lleva prueba, y todo cambio de comportamiento se documenta en la guía
   que corresponda (`docs/`).

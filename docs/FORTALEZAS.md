@@ -18,7 +18,9 @@ negocio. Cada punto dice **dónde está** y **cómo se verifica**. Estado al 28/
 | **Contratos pequeños entre capas.** El módulo solo usa `DefinicionModulo`, `ejecucion`/`ejecutar_tarea`, `ResumenEjecucion`, `get_logger`, `es_administrador`/`solo_administradores` | `docs/ARQUITECTURA.md` | Prueba de arquitectura |
 | **Inversión de dependencias.** El núcleo define el contrato de identidad y STOD lo implementa: cambiar a Entra ID no toca el núcleo | `core/identidad.py`, `integraciones/stod.py` | Las pruebas usan un proveedor simulado sin tocar el núcleo |
 | **DTOs inmutables entre límites** (`ResumenEjecucion`, `Identidad`, `Llamada`…), nunca filas ORM | `core/ejecuciones.py` | Revisión de diseño + prueba de arquitectura |
-| **Datos aislados por prefijo:** `HUB_*` del núcleo, `<MODULO>_*` de cada módulo | Modelos y migraciones | Convención documentada en `AGREGAR_MODULO.md` |
+| **Datos aislados por prefijo:** `HUB_*` del núcleo, `<MODULO>_*` de cada módulo | Modelos y migraciones | `tests/test_arquitectura.py`: prefijo por dueño y ningún módulo nombra tablas `HUB_*` |
+| **Convivencia: un módulo no toca lo de otro ni lo de todos.** No lo nombra (tablas, `.env`, tareas, rutas, carpetas), no cambia `ruta`/`permiso`, no registra ganchos globales ni modifica `app.config`/`os.environ` | `docs/ARQUITECTURA.md` (principio 7) | `tests/test_arquitectura.py` y `DefinicionModulo` al arrancar |
+| **Todo módulo queda probado en su acceso sin escribir nada:** cada ruta pide sesión, da 403 sin asignación y 503 deshabilitado; y `tests/test_<id>.py` es obligatorio | `tests/test_contrato_modulos.py` | Recorre las rutas que el hub descubre, también las de un módulo nuevo |
 | **Un módulo defectuoso no tumba el hub:** si falla al importarse, se registra y el resto sigue | `cargar_modulos` | Log `modulo.error_carga` |
 | **Sistemas externos detrás de un contrato del módulo** (buzón EWS, SAP): en pruebas se reemplazan por dobles | `corte_caja/buzon.py`, `expedientes_seguros/sap.py` | `BuzonFalso`, `SapFalso` |
 
@@ -176,21 +178,25 @@ Baja              En STOD: pierde el acceso en ≤15 min. En el hub: «Deshabili
 
 ## 8. Pruebas automáticas
 
-**194 pruebas, 16 segundos**, sin tocar nada real: base SQLite en memoria y STOD, SAP y buzón
-simulados.
+**298 pruebas, menos de un minuto**, sin tocar nada real: base SQLite en memoria y STOD, SAP y
+buzón simulados. Además, **10 de punta a punta** en un navegador real (`--e2e`), aparte.
 
 | Archivo | Pruebas | Qué cubre |
 |---|---|---|
-| `test_acceso.py` | 60 | Login con STOD (casos de falla, bloqueo, revalidación), permisos por módulo, roles, nombres, administración, CSRF y cabeceras |
+| `test_acceso.py` | 68 | Login con STOD (casos de falla, bloqueo, revalidación), permisos por módulo, roles, nombres, administración, CSRF y cabeceras |
 | `test_corte_caja.py` | 50 | Reglas del corte, archivador idempotente, tarea con buzón simulado, simulación, panel, CRUD de empresas |
-| `test_expedientes_seguros.py` | 35 | Reglas, PDF, visor, bandeja, paquete, correo `.eml`, checklist, retención, permisos, aseguradoras |
-| `test_logs_ejecuciones.py` | 29 | Logs, saneamiento, ejecuciones, reversión, interrumpidas, sin cambios, exclusividad, módulo deshabilitado |
+| `test_expedientes_seguros.py` | 80 | Reglas, PDF, visor, bandeja, paquete, correo `.eml`, checklist, retención, permisos, aseguradoras |
+| `test_logs_ejecuciones.py` | 41 | Logs, saneamiento, ejecuciones, reversión, interrumpidas, sin cambios, exclusividad, módulo deshabilitado |
 | `test_sesion.py` | 9 | Inactividad, jornada, motivo, aviso, extender, API y formulario vencido con CSRF activo |
-| `test_interfaz.py` | 8 | Spinners, confirmaciones, tarjetas del inicio y avatares en las pantallas clave |
-| `test_arquitectura.py` | 3 | Las reglas del monolito modular (dependencias y ciclos) |
+| `test_interfaz.py` | 17 | Spinners, confirmaciones, tarjetas del inicio y avatares en las pantallas clave |
+| `test_arquitectura.py` | 12 | Las reglas del monolito modular: dependencias, ciclos, tablas, plantillas, convivencia entre módulos y que cada módulo tenga sus pruebas |
+| `test_contrato_modulos.py` | 5 | Acceso de **todas** las rutas de cada módulo: sin sesión, sin asignación y deshabilitado |
+| `test_scripts.py`, `test_migraciones.py`, `test_servidor.py` | 16 | Scripts de despliegue, filtro de migraciones y Waitress detrás de un proxy |
+| `e2e/` (con `--e2e`) | 10 | Navegador real (Playwright): login, confirmaciones, aviso de sesión, rol de Administrador |
 
 Tipos: mayoría **de integración** (login, permisos, módulos y base funcionando juntos), **unitarias**
-para las reglas puras (fechas, nombres de archivo, plantillas) y **de arquitectura**. Los cambios
+para las reglas puras (fechas, nombres de archivo, plantillas), **de arquitectura** y **de punta a punta**
+(servidor de QA sin el `.env` real; para una revisión completa, el skill `qa-orbit` de Claude Code). Los cambios
 de esquema se prueban además a mano en **SQL Server LocalDB** (subir, bajar, `db check` y el script
 SQL). Regla: si falla la prueba de arquitectura, se corrige el diseño, no la prueba. Ver `PRUEBAS.md`.
 

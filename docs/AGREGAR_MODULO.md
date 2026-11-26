@@ -391,6 +391,9 @@ Todas estas reglas las verifica `python -m pytest`; lista y motivos en
 - [ ] La carpeta, el `id`, el Blueprint y `get_logger` usan el mismo identificador.
 - [ ] `tests/test_<id>.py` cubre cada fila que aplica del [juego de pruebas](#juego-de-pruebas-del-módulo-teststest_idpy).
 - [ ] `python -m pytest` pasa, incluidas las pruebas del módulo, las de arquitectura y el contrato de módulos.
+- [ ] Revisado en navegador contra el servidor de QA: `python -m pytest --e2e tests/e2e` pasa y sus
+      pantallas se ven bien en escritorio y celular. Con Claude Code: «haz QA del módulo <id>» (skill
+      `qa-orbit`, que entrega un informe con veredicto). Ver [PRUEBAS.md](PRUEBAS.md#pruebas-de-punta-a-punta-navegador-real).
 - [ ] Migración generada, revisada y aplicada (si hay tablas).
 - [ ] Variables nuevas agregadas a `.env.example` sin valores reales.
 - [ ] Reiniciado el servidor: el módulo aparece en **Catálogo de módulos**, habilitado y sin

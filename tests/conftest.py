@@ -31,6 +31,19 @@ def contar_consultas():
 CONTRASENA = "Clave-Stod-2026"
 
 
+# Las pruebas de punta a punta (tests/e2e, Playwright) abren un navegador real: tardan más y
+# necesitan requirements-e2e.txt. Por eso no corren en `python -m pytest` ni en GitHub Actions;
+# se piden con `python -m pytest --e2e tests/e2e`. Ver docs/PRUEBAS.md.
+def pytest_addoption(parser):
+    parser.addoption("--e2e", action="store_true", help="Corre también las pruebas de punta a punta (tests/e2e).")
+
+
+def pytest_ignore_collect(collection_path, config):
+    if collection_path.name == "e2e" and not config.getoption("--e2e"):
+        return True
+    return None
+
+
 def aislar_peticiones(app):
     """Las pruebas mantienen un app_context abierto para usar la base de datos, y Flask
     reutiliza ese contexto (y su ``g``) en cada petición del cliente de pruebas. Se limpia

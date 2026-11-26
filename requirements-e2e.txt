@@ -1,0 +1,6 @@
+# Pruebas de punta a punta (tests/e2e) y QA en navegador (skill qa-orbit). Solo en el equipo de
+# quien desarrolla: no va al servidor ni a GitHub Actions. Después de instalar, una vez:
+#   python -m playwright install chromium
+-r requirements-dev.txt
+playwright==1.65.2
+pytest-playwright==0.10.0

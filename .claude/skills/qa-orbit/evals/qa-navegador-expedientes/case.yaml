@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: qa-navegador-expedientes
+expected_outcome: |
+  Recorrido en navegador real contra un servidor aislado (sin SAP ni la base real) con capturas en escritorio y celular, verificando el acceso con y sin el módulo, y un informe en español con hallazgos y evidencia.
