@@ -27,3 +27,7 @@ htmlcov/
 
 # Playwright: traces y capturas de pruebas que fallan (tests/e2e)
 test-results/
+
+# Graphify: se versiona el grafo (graphify-out/), no su caché ni la ruta local de cada equipo
+graphify-out/cache/
+graphify-out/.graphify_root

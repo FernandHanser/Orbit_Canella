@@ -301,6 +301,31 @@ serve.py                  # servidor Waitress para ambientes distintos a desarro
 
 ---
 
+## Grafo del código (Graphify)
+
+`graphify-out/` tiene el **grafo de conocimiento del código** generado con
+[Graphify](https://graphify.com): funciones, clases, imports y llamadas de `app/`, `tests/` y
+`scripts/`, agrupados en comunidades. Se genera **solo con análisis local (AST), sin IA y sin
+enviar nada afuera**.
+
+- **Verlo:** abrir `graphify-out/graph.html` en el navegador (interactivo). Resumen con los nodos
+  más conectados en `graphify-out/GRAPH_REPORT.md`.
+- **Consultarlo** desde la terminal (o pedírselo a Claude Code, que tiene el skill `/graphify`):
+  `python -m graphify query "¿cómo se autoriza una ruta de módulo?"`, `python -m graphify explain "ejecutar_tarea"`,
+  `python -m graphify path "create_app" "cargar_modulos"`, `python -m graphify affected "Usuario"`.
+- **Actualizarlo** después de cambiar código, antes del commit (sin IA, segundos):
+  `python -m graphify update .`
+- **Instalar** (una vez por equipo, no va en `requirements`): `pip install graphifyy`.
+
+Qué entra lo deciden `.gitignore` y `.graphifyignore` (fuera: `.env`, `instance/`, `contexto/`,
+`logs/`, `app/static/vendor/` y `migrations/versions/`). No se versionan `graphify-out/cache/` ni
+`graphify-out/.graphify_root` (son de cada equipo).
+
+Ojo al leer `GRAPH_REPORT.md`: marca como «ciclos» los `from . import x` de un módulo a sus propios
+submódulos; no lo son (la regla real la verifica `test_sin_ciclos_de_importacion`).
+
+---
+
 ## Guías
 
 | Guía | Para qué |

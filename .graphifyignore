@@ -1,0 +1,16 @@
+# Qué no entra al grafo de Graphify (además de lo que ya excluye .gitignore).
+
+# Datos personales y secretos: ya están en .gitignore; se repiten aquí por si alguien corre
+# graphify con --no-gitignore.
+.env
+instance/
+contexto/
+logs/
+
+# Librerías de terceros (Tabler, three.js…): ruido, no son código de ORBIT.
+app/static/vendor/
+
+# Generado o de apoyo, sin arquitectura propia.
+migrations/versions/
+.claude/skills/qa-orbit/evals/
+test-results/

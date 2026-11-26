@@ -13,6 +13,9 @@ automatización). Todo en español: código, comentarios, documentación y mensa
 
 ## Comandos
 
+Grafo del código en `graphify-out/` (Graphify, solo AST local): consultarlo antes de buscar a ciegas
+(`python -m graphify query|explain|path|affected`) y regenerarlo con `python -m graphify update .` tras cambiar código.
+
 ```bash
 python -m pytest                          # todo, en segundos; SQLite en memoria y STOD simulado
 python -m pytest tests/test_arquitectura.py
