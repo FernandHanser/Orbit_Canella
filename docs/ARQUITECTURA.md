@@ -92,6 +92,30 @@ caso (por ejemplo, "corte cerrado → notificar a otro módulo"):
 
 Los eventos llevan DTOs o tipos simples (principio 4) y viven en `core`, nunca en un módulo.
 
+### 7. Convivencia entre módulos
+
+Todos los módulos corren en el mismo proceso, con la misma base, el mismo `.env` y la misma
+aplicación Flask. Por eso no alcanza con que no se importen: un módulo tampoco puede **tocar** lo
+de otro ni lo que es de todos. Agregar un módulo nunca debe cambiar el comportamiento de otro.
+
+| Un módulo no… | Por qué | Cómo se impide |
+|---|---|---|
+| Importa otro módulo ni `app.core.models` | Acopla su código al de otro | `test_los_modulos_no_importan_otros_modulos_ni_modelos_del_nucleo` |
+| Nombra a otro módulo: sus tablas (SQL a mano a `CORTE_CAJA_*`), sus variables `.env`, sus tareas (`ejecutar_tarea("otro", …)`), sus pantallas (`url_for("otro.x")`, `/m/otro`) o su carpeta (`instance/otro`) | Es el mismo acople, escondido en un texto | `test_un_modulo_no_nombra_a_otro_modulo` (código, plantillas, JS y CSS) |
+| Nombra tablas `HUB_*` | El núcleo cambia sus tablas sin avisar | `test_los_modulos_no_nombran_tablas_del_nucleo` |
+| Usa tablas sin su prefijo `<ID>_` | No se distinguirían al respaldar o retirar | `test_las_tablas_llevan_el_prefijo_de_su_dueno` |
+| Deja plantillas fuera de `templates/<id>/` | Flask junta todas: una pisaría a la de otro | `test_las_plantillas_de_un_modulo_viven_en_templates_con_su_id` |
+| Se monta fuera de `/m/<id>` o con el permiso de otro (`ruta=`, `permiso=`) | Flask atiende la ruta al primero que la registra: podría tapar `/admin` u otro módulo | `DefinicionModulo` lo rechaza al arrancar |
+| Se llama distinto de su carpeta | Las reglas de arriba se calculan con la carpeta | `test_la_carpeta_de_un_modulo_se_llama_como_su_id` |
+| Registra ganchos de toda la aplicación (`before_app_request`, `app_errorhandler`, `app_context_processor`, `app_template_filter`…) | Correrían en cada petición del hub y de los demás módulos | `test_los_modulos_no_registran_ganchos_globales` (usar la versión del Blueprint: `before_request`, `errorhandler`…) |
+| Modifica `app.config` ni `os.environ` | Lo que ve otro módulo dependería del orden de carga | `test_los_modulos_no_modifican_la_configuracion_comun` |
+| Falla al cargar y tumba el hub | — | `cargar_modulos` lo registra en el log y sigue con los demás |
+
+Si un caso legítimo necesita saltarse una regla, se agrega a la lista de excepciones de la prueba
+(`EXCEPCIONES_GANCHOS`, `EXCEPCIONES_PLANTILLAS`) con el motivo: la excepción queda visible y
+revisada, no escondida. Lo que no se puede verificar con una prueba (por ejemplo, que una tarea no
+sature SAP o el buzón que comparte con otro módulo) se revisa al publicar el módulo.
+
 ---
 
 ## Atomicidad

@@ -310,9 +310,36 @@ def test_sin_permiso(entrar_como, app):
     assert entrar_como(u).get("/m/conciliacion/").status_code == 403
 ```
 
-Cubrir como mínimo: acceso con permiso, acceso denegado (web y API) y la lógica de `services.py`
-con datos simulados (sin conectarse a SAP, correo ni carpetas reales). Tipos de prueba, qué cubren
-y qué no: [PRUEBAS.md](PRUEBAS.md).
+### Lo que ya está probado sin que escribas nada
+
+`tests/test_contrato_modulos.py` recorre **todas** las rutas de cada módulo que el hub descubre
+(pantallas, API y estáticos) y verifica que sin sesión no respondan, que sin el módulo asignado
+den 403 (también a un administrador) y que con el módulo deshabilitado den 503. Además,
+`tests/test_arquitectura.py` exige que exista `tests/test_<id>.py` y verifica las reglas de
+convivencia ([ARQUITECTURA.md, principio 7](ARQUITECTURA.md#7-convivencia-entre-módulos)).
+
+### Juego de pruebas del módulo (`tests/test_<id>.py`)
+
+Va **completo antes de publicar el módulo**. Cada fila aplica si el módulo tiene esa pieza; la
+columna «Ejemplo» es una prueba real que puedes copiar.
+
+| Si el módulo tiene… | Prueba como mínimo | Ejemplo |
+|---|---|---|
+| Pantallas | Con el módulo asignado, la pantalla de inicio responde 200 y muestra su contenido | `test_panel_con_y_sin_permiso` (corte_caja) |
+| Reglas de negocio (`reglas.py`) | Cada regla con casos válidos, inválidos y límite, sin base ni red (unitarias) | `test_rangos_y_paginas_elegidas` (expedientes) |
+| Acciones solo para administradores | Un operador con el módulo recibe 403 en **cada** una (GET y POST) | `test_empresas_solo_lectura_para_usuarios_del_modulo` (corte_caja) |
+| Sistemas externos (SAP, buzón, SMTP, carpetas) | Siempre con un doble del contrato (`Protocol`), nunca contra el real. Que el sistema caído dé un mensaje claro o un 503, no un error 500 | `test_miniatura_con_sap_caido_da_503` (expedientes) |
+| Variables `<ID>_*` en `.env` | Si falta una, el error nombra exactamente cuál falta, y la pantalla avisa sin intentar conectarse | `test_modulo_sin_configurar_avisa_en_bandeja_y_en_visor` (expedientes) |
+| Tareas | Corrida exitosa (estado y `ctx.resultado`) y, si la tarea falla a mitad, **sus filas se revierten** | `test_fallo_de_la_corrida_revierte_filas` (corte_caja) |
+| Tareas por lotes | Un elemento malo queda con estado `error`, los demás se procesan y la corrida termina en `advertencia`; sin nada que hacer, `sin_cambios` | `test_un_correo_con_error_no_detiene_a_los_demas` (corte_caja) |
+| Efectos externos (correo, archivos, SAP) | Repetir la acción no duplica el efecto (doble clic, tarea repetida) | `test_si_no_se_puede_mover_se_reintenta_sin_duplicar_archivos` (corte_caja) |
+| Modo simulación o prueba | En ese modo no sale nada hacia terceros | `test_simulacion_no_toca_nada_y_no_repite` (corte_caja) |
+| Comandos de consola | Cada comando con un caso que funciona y uno que falla (código de salida ≠ 0) | `test_cli_empresas` (corte_caja) |
+| Listados | Paginación, y que el número de consultas no crezca con las filas (`contar_consultas`) | `test_lista_de_aseguradoras_sin_n_mas_1` (expedientes) |
+| Archivos con datos personales | No quedan archivos sueltos si algo falla a medias | `test_si_falla_un_archivo_aparte_no_queda_nada_a_medias` (expedientes) |
+
+Reglas: ninguna prueba se conecta a SAP, a correo ni a carpetas reales; cada error corregido
+lleva su prueba. Tipos de prueba, qué cubren y qué no: [PRUEBAS.md](PRUEBAS.md).
 
 ---
 
@@ -346,13 +373,24 @@ Ejemplo: `app/modulos/corte_caja/empresas.py`.
 - Importar otro módulo (`app.modulos.<otro>`) o los modelos del núcleo (`app.core.models`):
   usa los servicios públicos del núcleo. `tests/test_arquitectura.py` lo verifica. Ver
   [ARQUITECTURA.md](ARQUITECTURA.md).
+- Nombrar a otro módulo aunque no lo importes: SQL contra sus tablas, sus variables `.env`,
+  `ejecutar_tarea("otro", ...)`, `url_for("otro.x")`, `/m/otro` o `instance/otro`.
+- Cambiar `ruta=` o `permiso=` en `DefinicionModulo`: el módulo vive en `/m/<id>` (el hub se niega
+  a arrancarlo si no).
+- Ganchos de toda la aplicación (`before_app_request`, `app_errorhandler`,
+  `app_context_processor`, `app_template_filter`…): usa la versión del Blueprint, que solo aplica
+  a tus rutas. Ni modificar `app.config` u `os.environ`.
+
+Todas estas reglas las verifica `python -m pytest`; lista y motivos en
+[ARQUITECTURA.md, principio 7](ARQUITECTURA.md#7-convivencia-entre-módulos).
 
 ---
 
 ## 11. Lista de verificación para publicar
 
 - [ ] La carpeta, el `id`, el Blueprint y `get_logger` usan el mismo identificador.
-- [ ] `python -m pytest` pasa, incluidas las pruebas del módulo y las de arquitectura.
+- [ ] `tests/test_<id>.py` cubre cada fila que aplica del [juego de pruebas](#juego-de-pruebas-del-módulo-teststest_idpy).
+- [ ] `python -m pytest` pasa, incluidas las pruebas del módulo, las de arquitectura y el contrato de módulos.
 - [ ] Migración generada, revisada y aplicada (si hay tablas).
 - [ ] Variables nuevas agregadas a `.env.example` sin valores reales.
 - [ ] Reiniciado el servidor: el módulo aparece en **Catálogo de módulos**, habilitado y sin

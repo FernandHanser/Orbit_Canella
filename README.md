@@ -205,6 +205,19 @@ Seguimos cinco principios, detallados con ejemplos del código en
 Cuando un módulo tenga que avisarle a otro, se hará con eventos en memoria (*signals* de Flask)
 declarados en el núcleo, no con imports entre módulos.
 
+**Integridad del hub al agregar módulos: un módulo no toca lo de otro ni lo que es de todos.**
+No lo importa, ni lo nombra: nada de SQL contra sus tablas, leer sus variables `.env`, lanzar sus
+tareas, enlazar sus pantallas o escribir en su carpeta. Tampoco se monta fuera de `/m/<id>`, no
+registra ganchos que corran en todo el hub (`before_app_request`, `app_errorhandler`…) y no cambia
+`app.config` ni `os.environ`. Todo esto lo verifican las pruebas: un módulo que lo rompa no pasa
+`python -m pytest` y, por lo tanto, **no se despliega**. Lista completa y porqué:
+[ARQUITECTURA.md, principio 7](docs/ARQUITECTURA.md#7-convivencia-entre-módulos).
+
+**Pruebas de cada módulo.** Todo módulo queda cubierto solo en el acceso: sin sesión, sin
+asignación o deshabilitado no responde ninguna de sus rutas (`tests/test_contrato_modulos.py`).
+Lo propio del módulo va en `tests/test_<id>.py`, que es obligatorio, con el juego mínimo de
+[AGREGAR_MODULO.md](docs/AGREGAR_MODULO.md#9-pruebas).
+
 **Por qué importa mantenerlo.** El hub va a crecer con una automatización tras otra. Mientras se
 respeten estas reglas:
 

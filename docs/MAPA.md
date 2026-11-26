@@ -34,8 +34,10 @@ flowchart LR
     CA -. conecta .-> integ
 ```
 
-`core` no importa ni `modulos` ni `integraciones`; un módulo no importa otro módulo.
-Lo vigila `tests/test_arquitectura.py`.
+`core` no importa ni `modulos` ni `integraciones`; un módulo no importa otro módulo, ni nombra
+sus tablas, variables, tareas, rutas o carpetas, ni registra ganchos que afecten a todo el hub.
+Lo vigila `tests/test_arquitectura.py` (detalle en
+[ARQUITECTURA.md, principio 7](ARQUITECTURA.md#7-convivencia-entre-módulos)).
 
 ---
 
@@ -175,4 +177,5 @@ Sin JavaScript en línea (lo prohíbe la CSP). Detalle en [INTERFAZ.md](INTERFAZ
 
 `python -m pytest` corre todo en segundos, con SQLite en memoria y STOD simulado: nunca toca la
 base real. Un archivo por área (`tests/test_<area>.py`); las reglas de arquitectura están en
-`tests/test_arquitectura.py`. Ver [PRUEBAS.md](PRUEBAS.md).
+`tests/test_arquitectura.py`; el acceso de cada módulo, en `tests/test_contrato_modulos.py`. Ver
+[PRUEBAS.md](PRUEBAS.md).

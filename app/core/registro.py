@@ -60,10 +60,17 @@ class DefinicionModulo:
                 f"El Blueprint del módulo {self.id!r} debe llamarse igual que el módulo "
                 f"(se llama {self.blueprint.name!r})."
             )
-        if self.ruta is None:
-            object.__setattr__(self, "ruta", f"/m/{self.id}")
-        if self.permiso is None:
-            object.__setattr__(self, "permiso", f"modulo.{self.id}")
+        # Ruta y permiso se derivan del id y no se pueden cambiar: con otra ruta, un módulo podría
+        # montarse sobre /admin o sobre las URLs de otro módulo (Flask atiende al primero que se
+        # registró); con otro permiso, se presentaría con el permiso de otro módulo.
+        for campo, esperado in (("ruta", f"/m/{self.id}"), ("permiso", f"modulo.{self.id}")):
+            valor = getattr(self, campo)
+            if valor is None:
+                object.__setattr__(self, campo, esperado)
+            elif valor != esperado:
+                raise ValueError(
+                    f"El módulo {self.id!r} no puede usar {campo}={valor!r}: debe ser {esperado!r}."
+                )
 
     @property
     def endpoint_inicio(self) -> str:

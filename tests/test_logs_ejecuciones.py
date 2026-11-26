@@ -128,6 +128,11 @@ def test_definicion_de_modulo_validada():
         DefinicionModulo(id="bueno", nombre="x", descripcion="", icono="x", blueprint=Blueprint("otro", __name__))
     d = DefinicionModulo(id="bueno", nombre="x", descripcion="", icono="x", blueprint=Blueprint("bueno", __name__))
     assert (d.ruta, d.permiso) == ("/m/bueno", "modulo.bueno")
+    # Un módulo no puede montarse sobre rutas ajenas ni presentarse con el permiso de otro.
+    for ajeno in ({"ruta": "/admin"}, {"ruta": "/m/corte_caja"}, {"permiso": "modulo.corte_caja"}):
+        with pytest.raises(ValueError):
+            DefinicionModulo(id="bueno", nombre="x", descripcion="", icono="x",
+                             blueprint=Blueprint("bueno", __name__), **ajeno)
 
 
 # ---------------------------------------------------------------- paginación

@@ -26,6 +26,9 @@ flask --app wsgi db upgrade
 - **Dependencias:** `core` no importa `modulos` ni `integraciones`; un módulo no importa otro
   módulo ni `app.core.models`. Lo verifica `tests/test_arquitectura.py`: si falla, se corrige el
   diseño, no la prueba.
+- **Convivencia:** un módulo tampoco nombra a otro (tablas, `.env`, tareas, rutas, carpetas), no
+  cambia `ruta`/`permiso`, no registra ganchos globales (`before_app_request`…) ni modifica
+  `app.config`/`os.environ`. Ver ARQUITECTURA.md, principio 7.
 - **Contrato del núcleo para módulos:** `DefinicionModulo`, `get_logger`, `ejecucion`,
   `ejecutar_tarea`, `ultimas_ejecuciones`, `es_administrador`, `solo_administradores`,
   paginación y `db`. Nada más.
@@ -48,6 +51,7 @@ flask --app wsgi db upgrade
   migraciones allí sin que el responsable lo pida: darle los comandos exactos.
 - Para ver una pantalla sin la base real: un servidor aparte con `create_app("testing", ...)`,
   SQLite temporal y usuario del STOD simulado, en otro puerto (p. ej. 5057). Nunca el de :5000.
+- Un módulo nuevo lleva `tests/test_<id>.py` con el juego mínimo de AGREGAR_MODULO.md §9.
 - Toda funcionalidad nueva lleva prueba, y todo cambio de comportamiento se documenta en la guía
   que corresponda (`docs/`).
 
