@@ -1,6 +1,8 @@
 """Cabeceras de seguridad HTTP. Las contraseñas las valida STOD (app/integraciones/stod.py)."""
 from __future__ import annotations
 
+import mimetypes
+
 from flask import Flask, request
 
 CSP = (
@@ -11,6 +13,11 @@ CSP = (
 
 
 def instalar_cabeceras(app: Flask) -> None:
+    # En Windows, Python toma el tipo de cada extensión del registro, y algunos equipos tienen
+    # «.js = text/plain». Con «nosniff» el navegador se niega a ejecutar esos scripts y el hub se
+    # queda sin menú, confirmaciones ni aviso de sesión. El tipo de .js no depende del equipo.
+    mimetypes.add_type("text/javascript", ".js")
+
     @app.after_request
     def _cabeceras(respuesta):
         respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")

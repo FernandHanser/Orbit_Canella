@@ -104,6 +104,25 @@ def test_upgrade_desde_cero_deja_el_mismo_esquema_que_los_modelos(app_vacia):
     assert _tablas() == set(db.metadata.tables)
 
 
+def test_corte_caja_queda_con_la_estructura_oficial_de_carpetas(app_vacia):
+    # 5869c708f797: nombres y subcarpetas que usa Contabilidad en producción (prototipo, 083118e).
+    upgrade()
+    with db.engine.connect() as conexion:
+        filas = dict(conexion.execute(text('SELECT carpeta, plantilla_carpeta FROM "CORTE_CAJA_EMPRESAS"')).all())
+    assert filas == {
+        "Maquipos": "1.Año {AAAA}/{AAAA}{MM}{MES}/{DD}-{MM}-{AA}",
+        "Vesa": "1.Año {AAAA}/{AAAA}{MM}{MES}/{DD}-{MM}-{AA}",
+        "Cobradores": "1.Año {AAAA}/{AAAA}{MM}{MES}/{DD}-{MM}-{AA}",
+        "Mister Credit": "1.Año {AAAA}/{AAAA}{MM}{MES}/{DD}-{MM}-{AA}",
+        "Mauto": "1.Año{AAAA}/{MM} {MES} {AAAA}/{DD}-{MM}-{AA}",
+        "Canella": "1.Año{AAAA}/{AAAA}{MM}{MES}/{DD}-{MM}-{AA}",
+    }
+    downgrade(revision="5e2b9c4d7a10")
+    with db.engine.connect() as conexion:
+        nombres = {c for (c,) in conexion.execute(text('SELECT carpeta FROM "CORTE_CAJA_EMPRESAS"'))}
+    assert nombres == {"MAQUIPOS", "VESA", "Cobradores", "Mauto", "MR. Credit", "CANELLA"}
+
+
 def test_downgrade_deshace_todo_y_se_puede_volver_a_aplicar(app_vacia):
     # El plan de reversa de docs/DESPLIEGUE.md es `db downgrade`: tiene que funcionar.
     upgrade()

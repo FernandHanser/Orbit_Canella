@@ -2,74 +2,53 @@
 {% from "_macros.html" import encabezado, paginacion as pie_paginacion %}
 {% block titulo %}Corte de caja diario{% endblock %}
 {% block encabezado %}
-  {% call encabezado("Corte de caja diario", "Automatizaciones") %}
-    <a class="btn" href="{{ url_for('corte_caja.empresas') }}"><i class="ti ti-building-store me-2"></i>Empresas</a>
-    {# Spinner siempre (la revisión puede tardar); confirmación solo en modo real, porque responde
-       a las agencias y mueve correos (ver docs/INTERFAZ.md, "Spinners y confirmaciones"). #}
-    <form method="post" action="{{ url_for('corte_caja.procesar_ahora') }}" class="d-inline"
-          data-cargando="Revisando buzón…"
-          {% if modo == "real" %}data-confirmar-titulo="¿Revisar el buzón ahora?"
-          data-confirmar="Se procesarán los correos pendientes: se guardarán los archivos válidos, se enviarán los correos de rechazo a las agencias y los correos se moverán de la bandeja de entrada. Puede tardar unos minutos."
-          data-confirmar-boton="Sí, revisar"{% endif %}>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary"><i class="ti ti-refresh me-2"></i>Revisar buzón ahora</button>
-    </form>
+  {% call encabezado("Corte de caja diario", "Automatizaciones", "Departamento de Contabilidad · estado de los correos entrantes") %}
+    <a class="btn" href="{{ url_for('corte_caja.cajas') }}"><i class="ti ti-settings me-2"></i>Directorio de tiendas</a>
   {% endcall %}
 {% endblock %}
 {% block contenido %}
-{% if modo == "simulacion" %}
-  <div class="alert alert-info">
-    <div class="d-flex">
-      <i class="ti ti-test-pipe alert-icon"></i>
-      <div>
-        <h4 class="alert-title">Modo simulación</h4>
-        <div class="text-secondary">Se registra lo que se haría con cada correo, pero no se responde, no se guardan archivos
-          y los correos se quedan en la bandeja de entrada. Las filas llevan la etiqueta «Simulado».</div>
-      </div>
-    </div>
+{# KPIs generales del prototipo: aceptadas, rechazadas y tiendas registradas. #}
+<div class="row row-cards mb-3">
+  <div class="col-sm-4">
+    <div class="card card-sm"><div class="card-body">
+      <div class="subheader">Aceptadas</div>
+      <div class="h1 mb-0 text-green">{{ kpis.aceptadas }}</div>
+    </div></div>
   </div>
-{% elif modo != "real" %}
-  <div class="alert alert-warning">
-    <div class="d-flex">
-      <i class="ti ti-alert-triangle alert-icon"></i>
-      <div>
-        <h4 class="alert-title">Módulo sin configurar</h4>
-        <div class="text-secondary">Falta <code>CORTE_CAJA_MODO</code> y las demás variables <code>CORTE_CAJA_*</code> en el <code>.env</code> del servidor.</div>
-      </div>
-    </div>
+  <div class="col-sm-4">
+    <div class="card card-sm"><div class="card-body">
+      <div class="subheader">Rechazadas</div>
+      <div class="h1 mb-0 text-red">{{ kpis.rechazadas }}</div>
+    </div></div>
   </div>
-{% endif %}
+  <div class="col-sm-4">
+    <div class="card card-sm"><div class="card-body">
+      <div class="subheader">Tiendas registradas</div>
+      <div class="h1 mb-0">{{ kpis.tiendas }}</div>
+    </div></div>
+  </div>
+</div>
 
 <div class="card">
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       {% for clave, titulo, icono, color in pestanas %}
-        {% set cantidad = conteos.get(clave, 0) %}
         <li class="nav-item">
-          <a class="nav-link pestana-estado{% if estado == clave %} active{% endif %}" style="--color-pestana: var(--tblr-{{ color }})"
-             href="{{ url_for('corte_caja.inicio', estado=clave, empresa=filtro.empresa or None, texto=filtro.texto or None,
-                              desde=filtro.desde.isoformat() if filtro.desde else None, hasta=filtro.hasta.isoformat() if filtro.hasta else None) }}">
+          <a class="nav-link pestana-estado{% if pestana == clave %} active{% endif %}" style="--color-pestana: var(--tblr-{{ color }})"
+             href="{{ url_for('corte_caja.inicio', pestana=clave) }}">
             <i class="ti ti-{{ icono }} me-2 text-{{ color }}"></i>{{ titulo }}
-            {# El contador toma el color solo si hay algo: un 0 no debe llamar la atención. #}
-            <span class="badge bg-{{ color if cantidad else 'secondary' }}-lt ms-2">{{ cantidad }}</span>
           </a>
         </li>
       {% endfor %}
     </ul>
   </div>
 
+{% if pestana in ("procesadas", "rechazadas") %}
   <form class="card-body border-bottom" method="get">
-    <input type="hidden" name="estado" value="{{ estado }}">
+    <input type="hidden" name="pestana" value="{{ pestana }}">
     <div class="row g-2 align-items-end">
-      <div class="col-sm-3">
-        <label class="form-label" for="f-empresa">Empresa</label>
-        <select class="form-select" name="empresa" id="f-empresa">
-          <option value="">Todas</option>
-          {% for e in empresas %}<option value="{{ e.carpeta }}"{% if filtro.empresa == e.carpeta %} selected{% endif %}>{{ e.carpeta }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="col-sm-3">
-        <label class="form-label" for="f-texto">Asunto o remitente</label>
+      <div class="col-sm-5">
+        <label class="form-label" for="f-texto">{% if pestana == "procesadas" %}Archivo, correo o asunto{% else %}Caja, remitente o asunto{% endif %}</label>
         <input class="form-control" type="search" name="texto" id="f-texto" value="{{ filtro.texto }}">
       </div>
       <div class="col-sm-2">
@@ -82,46 +61,161 @@
       </div>
       <div class="col-auto">
         <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Filtrar</button>
-        <a href="{{ url_for('corte_caja.inicio', estado=estado) }}" class="btn btn-link">Limpiar</a>
+        <a href="{{ url_for('corte_caja.inicio', pestana=pestana) }}" class="btn btn-link">Limpiar</a>
       </div>
     </div>
   </form>
+{% endif %}
 
+{% if pestana == "procesadas" %}
+  {% set estados = {"procesado": ("green", "Éxito"), "error": ("orange", "Error")} %}
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
-      <thead>
-        <tr>
-          <th>Recibido</th><th>Asunto</th><th>Remitente</th><th>Empresa</th><th>Fecha del corte</th>
-          <th>{% if estado == "procesado" %}Archivos{% else %}Motivo{% endif %}</th><th></th>
-        </tr>
-      </thead>
+      <thead><tr><th>Fecha / hora</th><th>Archivo</th><th>Estado</th><th>Correo</th><th>Asunto</th><th></th></tr></thead>
       <tbody>
         {% for c in correos %}
+          {% set par = estados.get(c.estado, ("secondary", c.estado)) %}
           <tr>
             <td class="celda-ts">{{ c.recibido|fecha("%d/%m/%Y %H:%M") }}</td>
-            <td>
-              {{ c.asunto or "(sin asunto)" }}
-              {% if c.simulado %}<span class="badge bg-azure-lt ms-1">Simulado</span>{% endif %}
-            </td>
-            <td class="small">{{ c.remitente }}</td>
-            <td>{{ c.empresa or "—" }}</td>
-            <td>{{ c.fecha_corte.strftime("%d/%m/%Y") if c.fecha_corte else "—" }}</td>
             <td class="small">
-              {% if estado == "procesado" %}
-                {{ c.archivos|length }}
-              {% else %}
-                {{ (c.motivo or "")|truncate(120) }}
-              {% endif %}
+              {% set nombres = c.archivos|map(attribute="nombre_final")|list or c.lista_adjuntos %}
+              {% if nombres|length == 1 %}{{ nombres[0] }}
+              {% elif nombres %}<span title="{{ nombres|join(', ') }}">{{ nombres|length }} archivos</span>
+              {% else %}—{% endif %}
             </td>
+            <td><span class="badge bg-{{ par[0] }}-lt">{{ par[1] }}</span></td>
+            <td class="small">{{ c.remitente or "Desconocido" }}</td>
+            <td class="small">{{ c.asunto or "(sin asunto)" }}</td>
             <td><a href="{{ url_for('corte_caja.detalle', correo_id=c.id) }}">Detalle</a></td>
           </tr>
         {% else %}
-          <tr><td colspan="7" class="text-center text-secondary py-4">No hay correos con esos filtros.</td></tr>
+          <tr><td colspan="6" class="text-center text-secondary py-4">No se encontraron registros con los filtros aplicados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {{ pie_paginacion(pagina, "correos") }}
-</div>
 
+{% elif pestana == "rechazadas" %}
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Fecha / hora</th><th>Caja</th><th>Correo remitente</th><th>Asunto del correo</th><th>Motivo del rechazo</th><th>Archivos adjuntos</th><th></th></tr></thead>
+      <tbody>
+        {% for c in correos %}
+          <tr>
+            <td class="celda-ts">{{ c.recibido|fecha("%d/%m/%Y %H:%M") }}</td>
+            <td class="small">{{ caja_por_id[c.id] or "—" }}</td>
+            <td class="small">{{ c.remitente or "Desconocido" }}</td>
+            <td class="small">{{ c.asunto or "(sin asunto)" }}</td>
+            <td class="small" style="white-space: pre-line">{{ c.motivo or "" }}</td>
+            <td class="small">{% for a in c.lista_adjuntos %}<div>{{ a }}</div>{% else %}—{% endfor %}</td>
+            <td><a href="{{ url_for('corte_caja.detalle', correo_id=c.id) }}">Detalle</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-secondary py-4">No hay correos rechazados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(pagina, "correos") }}
+
+{% else %}
+  {# Cuadre mensual: estado de cada caja del directorio en el día elegido del calendario. #}
+  {% set colores = {"recibido": "green", "sin_movimiento": "yellow", "no_recibido": "red"} %}
+  {% set nombres = {"recibido": "Corte recibido", "sin_movimiento": "Sin movimiento", "no_recibido": "Corte no recibido"} %}
+  <form class="card-body border-bottom" method="get">
+    <input type="hidden" name="pestana" value="cuadre">
+    <div class="row g-2 align-items-end">
+      <div class="col-auto">
+        <a class="btn btn-icon" href="{{ url_for('corte_caja.inicio', pestana='cuadre', mes=mes_anterior) }}" title="Mes anterior" aria-label="Mes anterior"><i class="ti ti-chevron-left"></i></a>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label" for="f-mes">Mes</label>
+        <input class="form-control" type="month" name="mes" id="f-mes" value="{{ mes }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Ver mes</button>
+        <a class="btn btn-icon" href="{{ url_for('corte_caja.inicio', pestana='cuadre', mes=mes_siguiente) }}" title="Mes siguiente" aria-label="Mes siguiente"><i class="ti ti-chevron-right"></i></a>
+      </div>
+    </div>
+  </form>
+
+  <div class="card-body">
+    <div class="row row-cards mb-3">
+      {% for estado in ("recibido", "sin_movimiento", "no_recibido") %}
+        <div class="col-sm-4">
+          <div class="card card-sm"><div class="card-body">
+            <div class="subheader">{% if estado == "recibido" %}Cortes recibidos{% elif estado == "sin_movimiento" %}Sin movimiento{% else %}Faltantes / no recibidos{% endif %}</div>
+            <div class="h1 mb-0 text-{{ colores[estado] }}">{{ resumen[estado] if estados else "—" }}</div>
+          </div></div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Estado de cortes del {{ dia.strftime("%d/%m/%Y") }}</h3></div>
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead><tr><th>Nombre de caja</th><th>Correo</th><th>Estatus</th></tr></thead>
+              <tbody>
+                {% for caja, estado in estados %}
+                  <tr>
+                    <td class="fw-medium">{{ caja.nombre_caja }}<div class="small text-secondary">{{ caja.categoria }}</div></td>
+                    <td class="small text-secondary">{{ caja.correo or "Sin correo" }}</td>
+                    <td><span class="badge bg-{{ colores[estado] }}-lt">{{ nombres[estado] }}</span></td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="3" class="text-center text-secondary py-4">
+                    No hay tiendas registradas en el directorio. <a href="{{ url_for('corte_caja.caja_nueva') }}">Agregar una</a>.
+                  </td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">{{ titulo_mes }}</h3></div>
+          <div class="card-body">
+            <table class="table table-sm text-center mb-3 calendario-cuadre">
+              <thead><tr>{% for d in "LMXJVSD" %}<th class="text-secondary">{{ d }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for semana in calendario %}
+                  <tr>
+                    {% for celda in semana %}
+                      {% if celda %}
+                        {% set d, estado = celda %}
+                        {% set color = colores.get(estado) %}
+                        <td class="p-1">
+                          {% if color %}
+                            <a href="{{ url_for('corte_caja.inicio', pestana='cuadre', mes=mes, dia=d.isoformat()) }}"
+                               class="d-block rounded py-1 fw-bold text-decoration-none bg-{{ color }}-lt{% if d == dia %} border border-2 border-primary{% endif %}"
+                               title="{{ nombres[estado] if estado != 'no_recibido' else 'Cero cortes recibidos' }}">{{ d.day }}</a>
+                          {% else %}
+                            <span class="d-block rounded py-1 text-secondary opacity-50{% if d == dia %} border border-2 border-primary{% endif %}">{{ d.day }}</span>
+                          {% endif %}
+                        </td>
+                      {% else %}<td></td>{% endif %}
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <div class="small text-secondary">
+              <div><span class="badge bg-green-lt me-2">&nbsp;</span>Cortes recibidos</div>
+              <div><span class="badge bg-yellow-lt me-2">&nbsp;</span>Sin movimiento</div>
+              <div><span class="badge bg-red-lt me-2">&nbsp;</span>Cero cortes recibidos</div>
+              <div><span class="badge bg-secondary-lt me-2">&nbsp;</span>Futuro / sin evaluar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+</div>
 {% endblock %}

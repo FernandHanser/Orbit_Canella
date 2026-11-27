@@ -269,8 +269,9 @@ hecho.
 **Qué hace:** elige puertos y Python, clona `dev` en `C:\ORBIT`, crea el
 `.venv` e instala dependencias. Copia el `.env` y le cambia solo lo de `Env` en
 `despliegue.psd1`: `AUTOMATE_ENV=production`, `HOST=127.0.0.1`, `PORT=<interno elegido>`,
-`PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1`, `LOG_DIR` vacío y
-`CORTE_CAJA_MODO=simulacion`, más un `SECRET_KEY` si no tenía. Aplica migraciones pendientes e
+`PROXY_CONFIABLE=127.0.0.1`, `SESSION_COOKIE_SECURE=1` y `LOG_DIR` vacío, más un `SECRET_KEY`
+si no tenía. (Corte de caja ya no tiene modo simulación: no programar su tarea en este servidor
+mientras el prototipo siga leyendo el mismo buzón.) Aplica migraciones pendientes e
 instala el servicio `ORBIT`. Si falta, instala el Caddy compartido (servicio `Caddy`). Luego
 agrega el sitio `C:\Caddy\sitios\orbit.caddy`, recarga Caddy, abre el 8443 y comprueba `/salud`.
 Si el servidor sale a internet por proxy: `-Proxy http://128.1.200.140:8080`.

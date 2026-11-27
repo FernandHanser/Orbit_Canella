@@ -192,7 +192,7 @@ buzón simulados. Además, **13 de punta a punta** en un navegador real (`--e2e`
 | `test_arquitectura.py` | 12 | Las reglas del monolito modular: dependencias, ciclos, tablas, plantillas, convivencia entre módulos y que cada módulo tenga sus pruebas |
 | `test_contrato_modulos.py` | 5 | Acceso de **todas** las rutas de cada módulo: sin sesión, sin asignación y deshabilitado |
 | `test_scripts.py`, `test_migraciones.py`, `test_servidor.py` | 16 | Scripts de despliegue, filtro de migraciones y Waitress detrás de un proxy |
-| `e2e/` (con `--e2e`) | 13 | Navegador real (Playwright): login, confirmaciones, aviso de sesión, rol de Administrador, encabezados en celular |
+| `e2e/` (con `--e2e`) | 14 | Navegador real (Playwright): login, confirmaciones (también al eliminar una tienda del directorio), aviso de sesión, rol de Administrador, encabezados en celular |
 
 Tipos: mayoría **de integración** (login, permisos, módulos y base funcionando juntos), **unitarias**
 para las reglas puras (fechas, nombres de archivo, plantillas), **de arquitectura** y **de punta a punta**
