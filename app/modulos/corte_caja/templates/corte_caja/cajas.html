@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import encabezado, paginacion as pie_paginacion %}
+{% block titulo %}Directorio de tiendas{% endblock %}
+{% block encabezado %}
+  {% call encabezado("Directorio de cajas y tiendas", "Corte de caja diario · Configuración") %}
+    <a class="btn" href="{{ url_for('corte_caja.inicio') }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+    <a class="btn btn-primary" href="{{ url_for('corte_caja.caja_nueva') }}"><i class="ti ti-plus me-2"></i>Agregar tienda</a>
+  {% endcall %}
+{% endblock %}
+{% block contenido %}
+<div class="card">
+  <div class="card-body text-secondary small border-bottom">
+    El cuadre mensual revisa, para cada caja de esta lista, si llegó su corte: la reconoce por su correo o por su nombre en el asunto.
+  </div>
+  <form class="card-body border-bottom" method="get">
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-6">
+        <label class="form-label" for="f-texto">Categoría, caja, responsable o correo</label>
+        <input class="form-control" type="search" name="texto" id="f-texto" value="{{ texto }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Buscar</button>
+        <a href="{{ url_for('corte_caja.cajas') }}" class="btn btn-link">Limpiar</a>
+      </div>
+    </div>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Categoría</th><th>Nombre de caja</th><th>Responsable</th><th>Correo electrónico</th><th class="w-1"></th></tr></thead>
+      <tbody>
+        {% for c in cajas %}
+          <tr>
+            <td class="small">{{ c.categoria }}</td>
+            <td class="fw-medium">{{ c.nombre_caja }}</td>
+            <td>{{ c.responsable or "—" }}</td>
+            <td class="small">{{ c.correo or "Sin correo" }}</td>
+            <td class="text-nowrap">
+              <a class="btn btn-sm" href="{{ url_for('corte_caja.caja_editar', caja_id=c.id) }}"><i class="ti ti-pencil me-1"></i>Editar</a>
+              <form method="post" action="{{ url_for('corte_caja.caja_eliminar', caja_id=c.id) }}" class="d-inline"
+                    data-cargando="Eliminando…"
+                    data-confirmar-titulo="¿Eliminar {{ c.nombre_caja }}?"
+                    data-confirmar="Dejará de aparecer en el cuadre mensual. Los correos ya registrados no cambian."
+                    data-confirmar-boton="Sí, eliminar">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-ghost-danger" title="Eliminar" aria-label="Eliminar {{ c.nombre_caja }}"><i class="ti ti-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-secondary py-4">{% if texto %}No hay tiendas con esa búsqueda.{% else %}No hay tiendas registradas.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pie_paginacion(pagina, "tiendas") }}
+</div>
+{% endblock %}

@@ -73,7 +73,7 @@ procedimiento es el mismo para cualquier proyecto nuevo (skill `caddy-deploy`).
 | Módulo | Qué hace | Estado | Guía |
 |---|---|---|---|
 | Expedientes de Seguros (Taller) | Arma el paquete para Cobros con las páginas del expediente en SAP y envía el correo | Implementado. Fuera de producción, el correo va en modo prueba | [PLAN_EXPEDIENTES_SEGUROS.md](docs/PLAN_EXPEDIENTES_SEGUROS.md) |
-| Corte de caja diario | Archiva los cortes que llegan por correo y rechaza los que no cumplen | Implementado, en **modo simulación** hasta su paso a producción | [PLAN_INTEGRACION_CORTE_DE_CAJA.md](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) |
+| Corte de caja diario | Archiva los cortes que llegan por correo y rechaza los que no cumplen | Implementado (reglas y tablero del prototipo al 26/11/2026); falta el corte con el prototipo | [PLAN_INTEGRACION_CORTE_DE_CAJA.md](docs/PLAN_INTEGRACION_CORTE_DE_CAJA.md) |
 | Módulo de ejemplo | Plantilla técnica para crear módulos; no procesa datos contables | Referencia | [AGREGAR_MODULO.md](docs/AGREGAR_MODULO.md) |
 | Contraseñas de pago | Integración del proyecto `Automatizacion_Contrasenas` | Diseñado, sin implementar | [PLAN_INTEGRACION_CONTRASENAS.md](docs/PLAN_INTEGRACION_CONTRASENAS.md) |
 

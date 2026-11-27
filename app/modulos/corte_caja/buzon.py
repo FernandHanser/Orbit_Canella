@@ -16,10 +16,11 @@ from datetime import datetime
 from typing import Protocol
 
 CARPETA_PROCESADOS = "Procesados"
+CARPETA_SIN_MOVIMIENTO = "Sin movimiento"
 CARPETA_RECHAZADOS = "Rechazados"
 CARPETA_IGNORADOS = "Ignorados"
 CARPETA_ERROR = "Error"
-CARPETAS = (CARPETA_PROCESADOS, CARPETA_RECHAZADOS, CARPETA_IGNORADOS, CARPETA_ERROR)
+CARPETAS = (CARPETA_PROCESADOS, CARPETA_SIN_MOVIMIENTO, CARPETA_RECHAZADOS, CARPETA_IGNORADOS, CARPETA_ERROR)
 
 
 class BuzonNoDisponible(RuntimeError):
@@ -41,6 +42,7 @@ class Correo:
     recibido: datetime           # UTC sin zona
     encabezados: dict[str, str] = field(default_factory=dict)   # nombres en minúsculas
     adjuntos: tuple[Adjunto, ...] = ()
+    cuerpo: str = ""             # texto del mensaje (puede traer HTML); se usa para «sin movimiento»
 
 
 class Buzon(Protocol):
@@ -160,4 +162,6 @@ class BuzonEws:
             recibido=recibido,
             encabezados=encabezados,
             adjuntos=adjuntos,
+            # text_body (Exchange 2013 o posterior) ya viene sin HTML; si no está, el cuerpo tal cual.
+            cuerpo=str(getattr(mensaje, "text_body", None) or mensaje.body or ""),
         )

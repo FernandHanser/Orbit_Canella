@@ -29,6 +29,5 @@
         PROXY_CONFIABLE       = '127.0.0.1'   # IP real del usuario detrás de Caddy
         SESSION_COOKIE_SECURE = '1'
         LOG_DIR               = ''            # la ruta del equipo no existe aquí: logs\ del hub
-        CORTE_CAJA_MODO       = 'simulacion'
     }
 }

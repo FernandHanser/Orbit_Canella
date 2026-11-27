@@ -3,11 +3,11 @@
 {% block titulo %}Correo de corte de caja{% endblock %}
 {% block encabezado %}
   {% call encabezado("Correo de corte de caja", "Corte de caja diario") %}
-    <a class="btn" href="{{ url_for('corte_caja.inicio', estado=correo.estado) }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
+    <a class="btn" href="{{ url_for('corte_caja.inicio', pestana='rechazadas' if correo.estado == 'rechazado' else ('cuadre' if correo.estado == 'sin_movimiento' else 'procesadas')) }}"><i class="ti ti-arrow-left me-2"></i>Volver</a>
   {% endcall %}
 {% endblock %}
 {% block contenido %}
-{% set nombres = {"procesado": ("green", "Procesado"), "rechazado": ("red", "Rechazado"), "ignorado": ("secondary", "Ignorado"), "error": ("orange", "Con error")} %}
+{% set nombres = {"procesado": ("green", "Procesado"), "sin_movimiento": ("azure", "Sin movimiento"), "rechazado": ("red", "Rechazado"), "ignorado": ("secondary", "Ignorado"), "error": ("orange", "Con error")} %}
 {% set par = nombres.get(correo.estado, ("secondary", correo.estado)) %}
 <div class="card">
   <div class="card-body">
@@ -30,6 +30,9 @@
         {% else %}{{ correo.ejecucion_id }}{% endif %}
       </dd>
       <dt class="col-sm-3">Identificador del mensaje</dt><dd class="col-sm-9 font-monospace small text-break">{{ correo.message_id }}</dd>
+      {% if correo.lista_adjuntos %}
+        <dt class="col-sm-3">Adjuntos recibidos</dt><dd class="col-sm-9">{% for a in correo.lista_adjuntos %}<div>{{ a }}</div>{% endfor %}</dd>
+      {% endif %}
       {% if correo.motivo %}
         <dt class="col-sm-3">Motivo</dt><dd class="col-sm-9" style="white-space: pre-line">{{ correo.motivo }}</dd>
       {% endif %}

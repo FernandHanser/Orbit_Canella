@@ -429,6 +429,21 @@ def test_cabeceras_de_seguridad(client):
     assert r.headers["Cache-Control"] == "no-store"
 
 
+def test_los_scripts_se_sirven_como_javascript_aunque_windows_diga_otra_cosa(tmp_path):
+    # Con «nosniff», un .js servido como text/plain no se ejecuta (registro de Windows con
+    # «.js = text/plain»): el hub quedaría sin menú, confirmaciones ni aviso de sesión.
+    import mimetypes
+
+    from app import create_app
+
+    mimetypes.add_type("text/plain", ".js")           # como en ese registro
+    app = create_app("testing", LOG_DIR=str(tmp_path / "logs"))
+    r = app.test_client().get("/static/js/interaccion.js")
+    assert r.status_code == 200 and r.mimetype == "text/javascript"
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    r.close()
+
+
 # ---------------------------------------------------------------- CSRF
 
 def test_csrf_activo_en_formularios_y_api(tmp_path):

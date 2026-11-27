@@ -14,7 +14,7 @@ Reglas de atomicidad del hub (docs/ARQUITECTURA.md#atomicidad) aplicadas aquí:
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Sequence
 
@@ -24,12 +24,13 @@ from app.core.ejecuciones import ContextoEjecucion
 from app.extensions import db
 
 from . import configuracion, reglas
-from .archivador import Archivador, ArchivoGuardado, sha256
+from .archivador import Archivador, ArchivoGuardado
 from .buzon import (
     CARPETA_ERROR,
     CARPETA_IGNORADOS,
     CARPETA_PROCESADOS,
     CARPETA_RECHAZADOS,
+    CARPETA_SIN_MOVIMIENTO,
     Buzon,
     BuzonEws,
     Correo,
@@ -58,7 +59,7 @@ def crear_archivador(config: configuracion.Configuracion) -> Archivador:
 
 def empresas_activas() -> list[reglas.Empresa]:
     filas = FilaEmpresa.query.filter(FilaEmpresa.activa == True).order_by(FilaEmpresa.orden, FilaEmpresa.carpeta).all()  # noqa: E712
-    return [reglas.Empresa(carpeta=f.carpeta, palabras_clave=f.lista_claves) for f in filas]
+    return [reglas.Empresa(carpeta=f.carpeta, palabras_clave=f.lista_claves, plantilla=f.plantilla_carpeta) for f in filas]
 
 
 def html_rechazo(correo: Correo, errores: Sequence[reglas.Error], hoy: date, buzon_reenvio: str) -> str:
@@ -87,16 +88,14 @@ class _Procesador:
         self.buzon = buzon
         self.archivador = archivador
         self.empresas = empresas
+        self.plantillas = {e.carpeta: e.plantilla for e in empresas}
         self.hoy = hoy
         self.conteo = {estado: 0 for estado in FilaCorreo.ESTADOS}
         self.archivos_guardados = 0
         self.archivos_duplicados = 0
 
     def ejecutar(self) -> dict:
-        log = self.ctx.log
-        if self.config.simulacion:
-            log.info("Modo simulación: no se responde, no se guarda ni se mueve nada", extra={"evento": "corte_caja.simulacion"})
-        for correo in self._pendientes():
+        for correo in self.buzon.pendientes(self.config.lote, self.config.recibidos_desde):
             try:
                 self._procesar(correo)
             except Exception as exc:
@@ -107,25 +106,11 @@ class _Procesador:
         elif self.conteo[FilaCorreo.ERROR]:
             self.ctx.estado = "advertencia"
         return {
-            "modo": self.config.modo,
             "correos": total,
             **self.conteo,
             "archivos_guardados": self.archivos_guardados,
             "archivos_duplicados": self.archivos_duplicados,
         }
-
-    # ------------------------------------------------------------------------ entrada
-
-    def _pendientes(self) -> list[Correo]:
-        if not self.config.simulacion:
-            return self.buzon.pendientes(self.config.lote, self.config.recibidos_desde)
-        # En simulación nada sale de la bandeja de entrada: se avanza por fecha de recepción y
-        # se saltan los ya simulados, para no registrar el mismo correo en cada corrida.
-        ultimo = db.session.query(db.func.max(FilaCorreo.recibido)).filter(FilaCorreo.simulado == True).scalar()  # noqa: E712
-        desde = max(d for d in (ultimo, self.config.recibidos_desde, datetime.min) if d is not None)
-        vistos = {m for (m,) in db.session.query(FilaCorreo.message_id).filter(
-            FilaCorreo.simulado == True, FilaCorreo.recibido >= desde)}  # noqa: E712
-        return [c for c in self.buzon.pendientes(self.config.lote, desde) if c.message_id not in vistos]
 
     # ------------------------------------------------------------------------ un correo
 
@@ -135,7 +120,10 @@ class _Procesador:
         if not reglas.remitente_permitido(correo.remitente, self.config.dominios):
             return self._ignorar(correo, f"Remitente fuera de los dominios permitidos ({', '.join(self.config.dominios)}): no se responde.")
 
-        clasificacion = reglas.clasificar(correo.asunto, [a.nombre for a in correo.adjuntos], self.empresas, self.hoy)
+        nombres = [a.nombre for a in correo.adjuntos]
+        if reglas.es_sin_movimiento(correo.asunto, correo.cuerpo, nombres):
+            return self._sin_movimiento(correo)
+        clasificacion = reglas.clasificar(correo.asunto, nombres, self.empresas, self.hoy)
         if not clasificacion.valida:
             return self._rechazar(correo, clasificacion)
         self._archivar(correo, clasificacion)
@@ -145,10 +133,19 @@ class _Procesador:
         self._registrar(correo, FilaCorreo.IGNORADO, motivo=motivo)
         self.ctx.log.info("Correo ignorado", extra={"evento": "corte_caja.ignorado", "datos": {"asunto": correo.asunto, "motivo": motivo}})
 
+    def _sin_movimiento(self, correo: Correo) -> None:
+        """Sin archivos que guardar ni nada que responder. Empresa y fecha se registran si el
+        asunto las trae, para el seguimiento por caja; si no, quedan vacías."""
+        self._mover(correo, CARPETA_SIN_MOVIMIENTO)
+        self._registrar(
+            correo, FilaCorreo.SIN_MOVIMIENTO, motivo="El remitente indicó que la caja no tuvo movimiento.",
+            empresa=reglas.identificar_empresa(correo.asunto, self.empresas), fecha_corte=reglas.extraer_fecha(correo.asunto),
+        )
+        self.ctx.log.info("Correo sin movimiento", extra={"evento": "corte_caja.sin_movimiento", "datos": {"asunto": correo.asunto}})
+
     def _rechazar(self, correo: Correo, clasificacion: reglas.Clasificacion) -> None:
-        if not self.config.simulacion:
-            html = html_rechazo(correo, clasificacion.errores, self.hoy, self.config.buzon)
-            self.buzon.responder(correo, ASUNTO_RECHAZO, html)
+        html = html_rechazo(correo, clasificacion.errores, self.hoy, self.config.buzon)
+        self.buzon.responder(correo, ASUNTO_RECHAZO, html)
         self._mover(correo, CARPETA_RECHAZADOS)
         self._registrar(
             correo, FilaCorreo.RECHAZADO, motivo="\n".join(str(e) for e in clasificacion.errores),
@@ -158,7 +155,7 @@ class _Procesador:
             "asunto": correo.asunto, "errores": len(clasificacion.errores)}})
 
     def _archivar(self, correo: Correo, clasificacion: reglas.Clasificacion) -> None:
-        partes = reglas.carpeta_destino(clasificacion.empresa, clasificacion.fecha)
+        partes = reglas.carpeta_destino(clasificacion.empresa, clasificacion.fecha, self.plantillas[clasificacion.empresa])
         validos = set(clasificacion.adjuntos_validos)
         guardados: list[tuple[str, int, ArchivoGuardado]] = []
         for adjunto in correo.adjuntos:
@@ -166,12 +163,7 @@ class _Procesador:
                 continue
             if not adjunto.contenido:
                 raise ValueError(f"El adjunto '{adjunto.nombre}' está vacío.")
-            nombre = reglas.nombre_seguro(adjunto.nombre)
-            if self.config.simulacion:
-                self.archivador.carpeta(partes)  # valida la ruta sin escribir
-                guardado = ArchivoGuardado("/".join(partes), nombre, sha256(adjunto.contenido), duplicado=False)
-            else:
-                guardado = self.archivador.guardar(partes, nombre, adjunto.contenido)
+            guardado = self.archivador.guardar(partes, reglas.nombre_seguro(adjunto.nombre), adjunto.contenido)
             guardados.append((adjunto.nombre, len(adjunto.contenido), guardado))
         self._mover(correo, CARPETA_PROCESADOS)
 
@@ -202,15 +194,16 @@ class _Procesador:
     # ------------------------------------------------------------------------ apoyo
 
     def _mover(self, correo: Correo, carpeta: str) -> None:
-        if not self.config.simulacion:
-            self.buzon.mover(correo, carpeta)
+        self.buzon.mover(correo, carpeta)
 
     def _registrar(self, correo: Correo, estado: str, motivo: str | None = None, empresa: str | None = None,
                    fecha_corte: date | None = None) -> FilaCorreo:
         fila = FilaCorreo(
             ejecucion_id=self.ctx.ejecucion_id, message_id=correo.message_id, asunto=correo.asunto[:500],
             remitente=correo.remitente[:320], recibido=correo.recibido, estado=estado, motivo=motivo,
-            empresa=empresa, fecha_corte=fecha_corte, simulado=self.config.simulacion,
+            empresa=empresa, fecha_corte=fecha_corte,
+            # Todos los adjuntos tal como llegaron (los rechazados no se guardan en CORTE_CAJA_ARCHIVOS).
+            adjuntos="\n".join(a.nombre for a in correo.adjuntos) or None,
         )
         db.session.add(fila)
         self.conteo[estado] += 1
